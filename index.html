@@ -1,0 +1,1529 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#070b18" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="步天" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>步天｜手机观星 PWA</title>
+  <style>
+    :root {
+      --bg: #070b18;
+      --panel: rgba(13, 20, 39, 0.90);
+      --panel-2: rgba(26, 36, 68, 0.78);
+      --text: #eef3ff;
+      --muted: #a9b6d7;
+      --line: rgba(150, 181, 255, 0.34);
+      --line-strong: rgba(244, 208, 111, 0.85);
+      --accent: #f4d06f;
+      --accent-2: #8bd3ff;
+      --danger: #ffb5b5;
+      --ok: #baf7c4;
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+      --font-serif-cn-en: "Times New Roman", "Songti SC", "SimSun", "STSong", "Noto Serif CJK SC", serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Times New Roman", "Songti SC", "SimSun", "STSong", "Noto Serif CJK SC", serif;
+      background:
+        radial-gradient(circle at 18% 8%, rgba(84, 119, 255, 0.22), transparent 34%),
+        radial-gradient(circle at 78% 6%, rgba(255, 207, 92, 0.13), transparent 28%),
+        radial-gradient(circle at 50% 100%, rgba(60, 210, 255, 0.13), transparent 33%),
+        var(--bg);
+      overflow-x: hidden;
+    }
+    .app { width: min(1420px, calc(100vw - 28px)); margin: 0 auto; padding: 18px 0 24px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding: 14px 4px 18px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .logo { width:46px; height:46px; display:grid; place-items:center; border-radius:14px; background: linear-gradient(135deg, rgba(244,208,111,.95), rgba(116,198,255,.9)); color:#091022; font-size:25px; font-weight:900; box-shadow:var(--shadow); }
+    h1 { margin:0; font-size:clamp(24px,3.2vw,42px); letter-spacing:.02em; line-height:1.1; }
+    .subtitle { margin-top:5px; color:var(--muted); font-size:14px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.08); color:var(--muted); padding:8px 11px; border-radius:999px; font-size:13px; white-space:nowrap; }
+    main { display:grid; grid-template-columns:340px minmax(0,1fr) 350px; gap:16px; align-items:stretch; }
+    .panel { background:var(--panel); border:1px solid rgba(255,255,255,.11); border-radius:var(--radius); box-shadow:var(--shadow); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); overflow:hidden; }
+    .panel-inner { padding:16px; }
+    .panel h2 { margin:0 0 12px; font-size:18px; letter-spacing:.02em; }
+    .field { margin-bottom:13px; }
+    label { display:block; margin-bottom:6px; color:var(--muted); font-size:13px; }
+    input, select, button { font:inherit; font-family:var(--font-serif-cn-en); }
+    input, select { width:100%; color:var(--text); background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:10px 11px; outline:none; }
+    input:focus, select:focus { border-color:rgba(139,211,255,.7); box-shadow:0 0 0 3px rgba(139,211,255,.12); }
+    select option { color:#111; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .btn-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+    button { border:0; border-radius:12px; padding:10px 12px; cursor:pointer; color:#081022; background:var(--accent); font-weight:700; transition: transform .12s ease, filter .12s ease, opacity .12s ease; }
+    button.secondary { color:var(--text); background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.14); font-weight:600; }
+    button:hover { transform: translateY(-1px); filter:brightness(1.04); }
+    button:disabled { opacity:.55; cursor:not-allowed; transform:none; }
+    .checkbox-row { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; margin: 10px 0 12px; }
+    .check { display:flex; gap:8px; align-items:center; color:var(--muted); font-size:13px; }
+    .check input { width:auto; }
+    .status { border-radius:14px; padding:12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.10); color:var(--muted); line-height:1.5; font-size:13px; }
+    .status strong { color:var(--text); }
+    .status .ok { color:var(--ok); }
+    .status .warn { color:var(--danger); }
+    .sky-panel { position:relative; min-height:740px; display:flex; flex-direction:column; }
+    .canvas-wrap { position:relative; flex:1; min-height:660px; }
+    canvas { width:100%; height:100%; display:block; background: radial-gradient(circle at center, rgba(36,48,86,.90), rgba(8,12,26,.96) 62%, rgba(5,8,17,1)); }
+    .overlay-top { position:absolute; left:16px; right:16px; top:16px; display:flex; justify-content:space-between; gap:12px; pointer-events:none; flex-wrap:wrap; }
+    .legend { position:absolute; left:16px; bottom:16px; color:var(--muted); font-size:13px; line-height:1.8; background:rgba(3,6,14,.45); border:1px solid rgba(255,255,255,.10); border-radius:14px; padding:10px 12px; pointer-events:none; }
+    .legend span { display:inline-block; width:22px; height:2px; vertical-align:middle; margin-right:7px; }
+    .legend .l1 { background:var(--line-strong); }
+    .legend .l2 { background:rgba(139,211,255,.38); }
+    .hint { color:var(--muted); font-size:12px; margin-top:8px; line-height:1.55; }
+    .detail-title { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+    .detail-title h2 { margin:0; font-size:25px; }
+    .pinyin { color:var(--accent); font-size:14px; margin-top:2px; }
+    .tag { display:inline-flex; margin-top:9px; padding:6px 9px; border-radius:999px; background:rgba(139,211,255,.12); border:1px solid rgba(139,211,255,.25); color:var(--accent-2); font-size:12px; }
+    .info-grid { display:grid; grid-template-columns: 1fr; gap:8px; margin:14px 0; }
+    .info-card { padding:10px 11px; border-radius:14px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.10); }
+    .info-card .k { color:var(--muted); font-size:12px; margin-bottom:4px; }
+    .info-card .v { font-size:14px; line-height:1.45; }
+    .list { display:flex; flex-direction:column; gap:8px; max-height:410px; overflow:auto; padding-right:4px; }
+    .item { text-align:left; display:flex; justify-content:space-between; gap:10px; align-items:center; padding:10px 10px; border-radius:14px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.09); color:var(--text); cursor:pointer; }
+    .item:hover, .item.active { border-color:rgba(244,208,111,.65); background:rgba(244,208,111,.11); }
+    .item .name { font-weight:800; }
+    .item .sub { color:var(--muted); font-size:12px; margin-top:2px; }
+    .item .visible { color:var(--ok); font-size:12px; white-space:nowrap; }
+    .item .hidden { color:var(--muted); font-size:12px; white-space:nowrap; }
+    .small-muted { color:var(--muted); font-size:12px; line-height:1.5; }
+    .source-box { font-size:12px; line-height:1.55; color:var(--muted); padding:10px 12px; border-radius:14px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); margin-top:12px; }
+    code { color:var(--accent-2); }
+    footer { color:var(--muted); text-align:center; font-size:12px; line-height:1.7; padding:18px 4px 0; }
+    @media (max-width: 1120px) {
+      main { grid-template-columns: 1fr; }
+      .sky-panel { min-height:620px; }
+      .canvas-wrap { min-height:560px; }
+    }
+
+    /* 手机 App / PWA 适配层 */
+    .mobile-toolbar, .mobile-toast { display:none; }
+    canvas { touch-action: none; }
+    @media (max-width: 820px) {
+      html, body { height:100%; overflow:hidden; overscroll-behavior:none; }
+      body { min-height:100dvh; }
+      .app { width:100vw; height:100dvh; margin:0; padding:0; overflow:hidden; }
+      header { position:fixed; z-index:32; top:0; left:0; right:0; padding: calc(10px + env(safe-area-inset-top)) 12px 8px; background:linear-gradient(to bottom, rgba(7,11,24,.94), rgba(7,11,24,.42), transparent); pointer-events:none; }
+      .brand { gap:9px; min-width:0; }
+      .logo { width:36px; height:36px; border-radius:12px; font-size:20px; }
+      h1 { font-size:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .subtitle { display:none; }
+      header .pill { display:none; }
+      main { display:block; height:100dvh; }
+      .sky-panel { position:fixed; inset:0; min-height:0; border:0; border-radius:0; box-shadow:none; background:transparent; }
+      .canvas-wrap { min-height:0; height:100dvh; }
+      canvas { height:100dvh; border-radius:0; }
+      .overlay-top { top: calc(58px + env(safe-area-inset-top)); left:10px; right:10px; gap:8px; }
+      .overlay-top .pill { padding:7px 9px; font-size:12px; background:rgba(3,6,14,.50); }
+      .legend { left:10px; right:10px; bottom: calc(76px + env(safe-area-inset-bottom)); font-size:11px; padding:8px 10px; line-height:1.55; }
+      .legend div:nth-child(1), .legend div:nth-child(2) { display:none; }
+      .mobile-toolbar { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:7px; position:fixed; left:10px; right:10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index:45; padding:8px; border-radius:22px; background:rgba(3,6,14,.66); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
+      .mobile-toolbar button { padding:10px 6px; border-radius:16px; font-size:12px; color:var(--text); }
+      .mobile-toolbar button.active { background:rgba(244,208,111,.94); color:#081022; }
+      .mobile-toast { display:block; opacity:0; transform:translateY(8px); transition:.2s ease; position:fixed; left:16px; right:16px; bottom: calc(82px + env(safe-area-inset-bottom)); z-index:70; text-align:center; color:var(--text); background:rgba(3,6,14,.78); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:10px 12px; font-size:13px; pointer-events:none; }
+      .mobile-toast.show { opacity:1; transform:translateY(0); }
+      main > .panel:first-child { position:fixed; z-index:55; left:10px; right:10px; top:auto; bottom: calc(82px + env(safe-area-inset-bottom)); max-height:72dvh; overflow:auto; border-radius:24px; transform:translateY(calc(100% + 120px)); transition:transform .22s ease; }
+      body.settings-open main > .panel:first-child { transform:translateY(0); }
+      main > .panel:last-child { position:fixed; z-index:52; left:10px; right:10px; bottom: calc(82px + env(safe-area-inset-bottom)); max-height:58dvh; overflow:auto; border-radius:24px; transform:translateY(calc(100% + 120px)); transition:transform .22s ease; }
+      body.detail-open main > .panel:last-child { transform:translateY(0); }
+      .panel-inner { padding:14px; }
+      .panel h2 { font-size:16px; margin-bottom:10px; }
+      .row, .btn-row { gap:8px; }
+      input, select, button { font-size:16px; }
+      input, select { padding:10px 10px; }
+      .checkbox-row { grid-template-columns:1fr 1fr; }
+      .source-box { display:none; }
+      .detail-title h2 { font-size:22px; }
+      .info-grid { gap:7px; margin:12px 0; }
+      .info-card { padding:9px 10px; }
+      .list { max-height:190px; }
+      footer { display:none; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">步</div>
+        <div>
+          <h1>步天 · 手机观星</h1>
+          <div class="subtitle">PWA 手机版：全屏星图、手机定位、指南针指向、点击恒星查看中西名称与所属星官</div>
+        </div>
+      </div>
+      <div class="pill" id="dataBadge">正在载入星官数据…</div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="panel-inner">
+          <h2>观测设置</h2>
+          <div class="field">
+            <label for="preset">城市预设</label>
+            <select id="preset">
+              <option value="lausanne">洛桑 Lausanne</option>
+              <option value="zurich">苏黎世 Zürich</option>
+              <option value="beijing">北京 Beijing</option>
+              <option value="shanghai">上海 Shanghai</option>
+              <option value="hongkong">香港 Hong Kong</option>
+              <option value="custom">自定义地点</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="field"><label for="lat">纬度 Latitude</label><input id="lat" type="number" step="0.0001" /></div>
+            <div class="field"><label for="lon">经度 Longitude</label><input id="lon" type="number" step="0.0001" /></div>
+          </div>
+          <div class="field"><label for="datetime">时间</label><input id="datetime" type="datetime-local" /></div>
+          <div class="btn-row">
+            <button id="nowBtn">现在</button>
+            <button id="playBtn" class="secondary">播放时间</button>
+          </div>
+          <div class="btn-row">
+            <button id="minusBtn" class="secondary">− 1小时</button>
+            <button id="plusBtn" class="secondary">+ 1小时</button>
+          </div>
+
+          <h2 style="margin-top:18px">显示设置</h2>
+          <div class="checkbox-row">
+            <label class="check"><input id="showStars" type="checkbox" checked /> 亮星</label>
+            <label class="check"><input id="showLines" type="checkbox" checked /> 星官连线</label>
+            <label class="check"><input id="showLabels" type="checkbox" checked /> 星官名称</label>
+            <label class="check"><input id="visibleOnly" type="checkbox" /> 只列可见</label>
+          </div>
+          <div class="field">
+            <label for="magLimit">星等限制：<span id="magText">6.0</span></label>
+            <input id="magLimit" type="range" min="0" max="6" step="0.1" value="6" />
+          </div>
+          <div class="field">
+            <label for="searchBox">搜索星官</label>
+            <input id="searchBox" placeholder="例如：北斗、参、轩辕、织女、心" />
+          </div>
+
+          <div class="status" id="loadStatus">
+            <strong>数据状态：</strong><br />正在从在线数据源加载。若离线打开，将自动使用少量内置示例。
+          </div>
+
+          <div class="source-box">
+            在线数据源使用 <code>Celestial Data</code> 整理的中国传统星官数据：<br />
+            <code>constellations.cn</code>：星官名称/标签点<br />
+            <code>constellations.lines.cn</code>：星官连线<br />
+            <code>stars.6</code>：6等以内亮星<br />
+            <code>starnames.cn / starnames</code>：中文星名与西方名称/编号<br />
+            <code>constellations.borders</code>：现代 IAU 星座边界<br />
+            <code>constellations</code>：现代星座名称位置 fallback
+          </div>
+        </div>
+      </section>
+
+      <section class="panel sky-panel">
+        <div class="canvas-wrap">
+          <canvas id="sky"></canvas>
+          <div class="overlay-top">
+            <div class="pill" id="placeLabel">地点</div>
+            <div class="pill" id="timeLabel">时间</div>
+          </div>
+          <div class="legend">
+            <div><span class="l1"></span>选中星官</div>
+            <div><span class="l2"></span>其他星官</div>
+            <div id="mapHint">圆心为天顶，外圈为地平线；拖动可旋转，双指可缩放。点击星星可查看名称。</div>
+          </div>
+          <div class="mobile-toolbar" aria-label="手机工具栏">
+            <button id="settingsFab" class="secondary" type="button">设置</button>
+            <button id="locateFab" class="secondary" type="button">定位</button>
+            <button id="compassFab" class="secondary" type="button">指南针</button>
+            <button id="detailFab" class="secondary" type="button">详情</button>
+            <button id="resetViewFab" class="secondary" type="button">重置</button>
+          </div>
+          <div class="mobile-toast" id="mobileToast" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-inner">
+          <div class="detail-title">
+            <div>
+              <h2 id="detailName">星官</h2>
+              <div class="pinyin" id="detailPinyin"></div>
+              <div class="tag" id="detailTag">全量数据版</div>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-card"><div class="k" id="detailEnglishLabel">英文释义</div><div class="v" id="detailEnglish">—</div></div>
+            <div class="info-card"><div class="k" id="detailConstellationLabel">现代星座</div><div class="v" id="detailConstellation">—</div></div>
+            <div class="info-card"><div class="k" id="detailVisibleLabel">当前可见性</div><div class="v" id="detailVisible">—</div></div>
+            <div class="info-card"><div class="k" id="detailStructureLabel">数据结构</div><div class="v" id="detailStructure">—</div></div>
+          </div>
+
+          <p class="small-muted" id="detailDesc"></p>
+
+          <h2 style="margin-top:18px">星官列表</h2>
+          <div class="small-muted" id="listSummary" style="margin-bottom:8px"></div>
+          <div id="asterismList" class="list"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      《步天》是 PWA 手机网页原型。可以添加到手机主屏幕；全量数据模式需要联网，离线时会退回少量内置示例。<br />
+      天文位置计算为轻量演示版本；星名来自公开数据匹配，适合产品原型，不等同于专业天文历算软件。
+    </footer>
+  </div>
+
+  <script>
+    const DATA_URLS = {
+      stars: "https://cdn.jsdelivr.net/gh/dieghernan/celestial_data@main/data/stars.6.min.geojson",
+      cnPoints: "https://cdn.jsdelivr.net/gh/dieghernan/celestial_data@main/data/constellations.cn.min.geojson",
+      cnLines: "https://cdn.jsdelivr.net/gh/dieghernan/celestial_data@main/data/constellations.lines.cn.min.geojson",
+      starNamesCnCsv: "https://cdn.jsdelivr.net/gh/dieghernan/celestial_data@main/data/starnames.cn.csv",
+      starNamesWestern: "https://cdn.jsdelivr.net/gh/dieghernan/celestial_data@main/data/starnames.csv",
+      westernBorders: "https://cdn.jsdelivr.net/gh/dieghernan/celestial_data@main/data/constellations.borders.min.geojson",
+      westernConstellationPoints: "https://cdn.jsdelivr.net/gh/dieghernan/celestial_data@main/data/constellations.min.geojson"
+    };
+
+    const cities = {
+      lausanne: { name: "洛桑", lat: 46.5197, lon: 6.6323 },
+      zurich: { name: "苏黎世", lat: 47.3769, lon: 8.5417 },
+      beijing: { name: "北京", lat: 39.9042, lon: 116.4074 },
+      shanghai: { name: "上海", lat: 31.2304, lon: 121.4737 },
+      hongkong: { name: "香港", lat: 22.3193, lon: 114.1694 },
+      custom: { name: "自定义地点", lat: 46.5197, lon: 6.6323 }
+    };
+
+    // 离线或在线加载失败时的最小备用数据。
+    const fallbackStars = [
+      { uid:"fb-dubhe", hip:"54061", zhName:"天枢", zhPinyin:"Tiān Shū", westernName:"Dubhe", designation:"α Ursae Majoris", hd:"HD 95689", ra:11.0621, dec:61.7510, mag:1.79 },
+      { uid:"fb-merak", hip:"53910", zhName:"天璇", zhPinyin:"Tiān Xuán", westernName:"Merak", designation:"β Ursae Majoris", hd:"HD 95418", ra:11.0307, dec:56.3824, mag:2.37 },
+      { uid:"fb-phecda", hip:"58001", zhName:"天玑", zhPinyin:"Tiān Jī", westernName:"Phecda", designation:"γ Ursae Majoris", hd:"HD 103287", ra:11.8972, dec:53.6948, mag:2.44 },
+      { uid:"fb-megrez", hip:"59774", zhName:"天权", zhPinyin:"Tiān Quán", westernName:"Megrez", designation:"δ Ursae Majoris", hd:"HD 106591", ra:12.2571, dec:57.0326, mag:3.31 },
+      { uid:"fb-alioth", hip:"62956", zhName:"玉衡", zhPinyin:"Yù Héng", westernName:"Alioth", designation:"ε Ursae Majoris", hd:"HD 112185", ra:12.9005, dec:55.9598, mag:1.77 },
+      { uid:"fb-mizar", hip:"65378", zhName:"开阳", zhPinyin:"Kāi Yáng", westernName:"Mizar", designation:"ζ Ursae Majoris", hd:"HD 116656", ra:13.3987, dec:54.9254, mag:2.23 },
+      { uid:"fb-alkaid", hip:"67301", zhName:"摇光", zhPinyin:"Yáo Guāng", westernName:"Alkaid", designation:"η Ursae Majoris", hd:"HD 120315", ra:13.7923, dec:49.3133, mag:1.86 },
+      { uid:"fb-betelgeuse", hip:"27989", zhName:"参宿四", zhPinyin:"Shēn Xiù Sì", westernName:"Betelgeuse", designation:"α Orionis", hd:"HD 39801", ra:5.9195, dec:7.4071, mag:.42 },
+      { uid:"fb-bellatrix", hip:"25336", zhName:"参宿五", zhPinyin:"Shēn Xiù Wǔ", westernName:"Bellatrix", designation:"γ Orionis", hd:"HD 35468", ra:5.4189, dec:6.3497, mag:1.64 },
+      { uid:"fb-mintaka", hip:"25930", zhName:"参宿三", zhPinyin:"Shēn Xiù Sān", westernName:"Mintaka", designation:"δ Orionis", hd:"HD 36486", ra:5.5334, dec:-.2991, mag:2.25 },
+      { uid:"fb-alnilam", hip:"26311", zhName:"参宿二", zhPinyin:"Shēn Xiù Èr", westernName:"Alnilam", designation:"ε Orionis", hd:"HD 37128", ra:5.6036, dec:-1.2019, mag:1.69 },
+      { uid:"fb-alnitak", hip:"26727", zhName:"参宿一", zhPinyin:"Shēn Xiù Yī", westernName:"Alnitak", designation:"ζ Orionis", hd:"HD 37742", ra:5.6793, dec:-1.9426, mag:1.74 },
+      { uid:"fb-saiph", hip:"27366", zhName:"参宿六", zhPinyin:"Shēn Xiù Liù", westernName:"Saiph", designation:"κ Orionis", hd:"HD 38771", ra:5.7959, dec:-9.6696, mag:2.07 },
+      { uid:"fb-rigel", hip:"24436", zhName:"参宿七", zhPinyin:"Shēn Xiù Qī", westernName:"Rigel", designation:"β Orionis", hd:"HD 34085", ra:5.2423, dec:-8.2016, mag:.13 },
+      { uid:"fb-antares", hip:"80763", zhName:"心宿二", zhPinyin:"Xīn Xiù Èr", westernName:"Antares", designation:"α Scorpii", hd:"HD 148478", ra:16.4901, dec:-26.4320, mag:1.06 },
+      { uid:"fb-vega", hip:"91262", zhName:"织女一", zhPinyin:"Zhī Nǚ Yī", westernName:"Vega", designation:"α Lyrae", hd:"HD 172167", ra:18.6156, dec:38.7837, mag:.03 },
+      { uid:"fb-altair", hip:"97649", zhName:"河鼓二", zhPinyin:"Hé Gǔ Èr", westernName:"Altair", designation:"α Aquilae", hd:"HD 187642", ra:19.8464, dec:8.8683, mag:.77 },
+      { uid:"fb-spica", hip:"65474", zhName:"角宿一", zhPinyin:"Jiǎo Xiù Yī", westernName:"Spica", designation:"α Virginis", hd:"HD 116658", ra:13.4199, dec:-11.1613, mag:.98 },
+      { uid:"fb-regulus", hip:"49669", zhName:"轩辕十四", zhPinyin:"Xuān Yuán Shí Sì", westernName:"Regulus", designation:"α Leonis", hd:"HD 87901", ra:10.1395, dec:11.9672, mag:1.35 }
+    ];
+
+    function coord(ra, dec) { return { ra, dec }; }
+    const fallbackAsterisms = [
+      { id:"beidou", name:"北斗", pinyin:"Běi Dǒu", en:"Northern Dipper", center:coord(12.5,56), lines:[[coord(11.0621,61.7510),coord(11.0307,56.3824),coord(11.8972,53.6948),coord(12.2571,57.0326),coord(12.9005,55.9598),coord(13.3987,54.9254),coord(13.7923,49.3133)]] },
+      { id:"shen", name:"参", pinyin:"Shēn", en:"Three Stars", center:coord(5.6,-2), lines:[[coord(5.9195,7.4071),coord(5.4189,6.3497),coord(5.5334,-.2991),coord(5.6036,-1.2019),coord(5.6793,-1.9426),coord(5.9195,7.4071)],[coord(5.5334,-.2991),coord(5.7959,-9.6696),coord(5.2423,-8.2016),coord(5.6793,-1.9426)]] },
+      { id:"xin", name:"心", pinyin:"Xīn", en:"Heart", center:coord(16.49,-26.4), lines:[[coord(16.3531,-25.5928),coord(16.4901,-26.4320),coord(16.5980,-28.2160)]] },
+      { id:"zhinv", name:"织女", pinyin:"Zhī Nǚ", en:"Girl Helper", center:coord(18.62,38.78), lines:[[coord(18.7462,37.6051),coord(18.6156,38.7837),coord(18.7389,39.6701)]] },
+      { id:"hegu", name:"河鼓", pinyin:"Hé Gǔ", en:"Drum at the River", center:coord(19.85,8.86), lines:[[coord(19.9219,6.4068),coord(19.8464,8.8683),coord(19.7710,10.6133)]] },
+      { id:"jiao", name:"角", pinyin:"Jiǎo", en:"Horn", center:coord(13.42,-11.16), lines:[[coord(13.4199,-11.1613),coord(13.5782,-.5959)]] },
+      { id:"xuanyuan", name:"轩辕", pinyin:"Xuān Yuán", en:"Xuanyuan", center:coord(10.2,16), lines:[[coord(10.2782,23.4173),coord(10.3329,19.8415),coord(10.1395,11.9672)]] }
+    ];
+
+    const canvas = document.getElementById("sky");
+    const ctx = canvas.getContext("2d");
+    const latInput = document.getElementById("lat");
+    const lonInput = document.getElementById("lon");
+    const dtInput = document.getElementById("datetime");
+    const preset = document.getElementById("preset");
+    const nowBtn = document.getElementById("nowBtn");
+    const playBtn = document.getElementById("playBtn");
+    const plusBtn = document.getElementById("plusBtn");
+    const minusBtn = document.getElementById("minusBtn");
+    const showStars = document.getElementById("showStars");
+    const showLines = document.getElementById("showLines");
+    const showLabels = document.getElementById("showLabels");
+    const visibleOnly = document.getElementById("visibleOnly");
+    const magLimit = document.getElementById("magLimit");
+    const magText = document.getElementById("magText");
+    const searchBox = document.getElementById("searchBox");
+    const listEl = document.getElementById("asterismList");
+    const listSummary = document.getElementById("listSummary");
+    const dataBadge = document.getElementById("dataBadge");
+    const loadStatus = document.getElementById("loadStatus");
+    const placeLabel = document.getElementById("placeLabel");
+    const timeLabel = document.getElementById("timeLabel");
+    const detailName = document.getElementById("detailName");
+    const detailPinyin = document.getElementById("detailPinyin");
+    const detailTag = document.getElementById("detailTag");
+    const detailEnglishLabel = document.getElementById("detailEnglishLabel");
+    const detailEnglish = document.getElementById("detailEnglish");
+    const detailConstellationLabel = document.getElementById("detailConstellationLabel");
+    const detailConstellation = document.getElementById("detailConstellation");
+    const detailVisibleLabel = document.getElementById("detailVisibleLabel");
+    const detailVisible = document.getElementById("detailVisible");
+    const detailStructureLabel = document.getElementById("detailStructureLabel");
+    const detailStructure = document.getElementById("detailStructure");
+    const detailDesc = document.getElementById("detailDesc");
+    const settingsFab = document.getElementById("settingsFab");
+    const locateFab = document.getElementById("locateFab");
+    const compassFab = document.getElementById("compassFab");
+    const detailFab = document.getElementById("detailFab");
+    const resetViewFab = document.getElementById("resetViewFab");
+    const mobileToast = document.getElementById("mobileToast");
+    const mapHint = document.getElementById("mapHint");
+
+    const state = {
+      stars: fallbackStars,
+      asterisms: fallbackAsterisms,
+      dataMode: "fallback",
+      selectedId: "beidou",
+      selectedType: "asterism",
+      selectedStarUid: null,
+      playing: false,
+      playTimer: null,
+      asterismScreen: new Map(),
+      starScreen: [],
+      constellationBorders: [],
+      constellationCenters: [],
+      nameCoverage: { chinese: 0, western: 0, constellations: 0, memberships: 0 },
+      viewAzOffset: 0,
+      viewZoom: 1,
+      orientationMode: false,
+      lastHeading: null,
+      touchMoved: false,
+      toastTimer: null
+    };
+
+    const CONSTELLATION_ROWS = "And|Andromeda|Andromedae|仙女座;Ant|Antlia|Antliae|唧筒座;Aps|Apus|Apodis|天燕座;Aqr|Aquarius|Aquarii|宝瓶座;Aql|Aquila|Aquilae|天鹰座;Ara|Ara|Arae|天坛座;Ari|Aries|Arietis|白羊座;Aur|Auriga|Aurigae|御夫座;Boo|Boötes|Boötis|牧夫座;Cae|Caelum|Caeli|雕具座;Cam|Camelopardalis|Camelopardalis|鹿豹座;Cnc|Cancer|Cancri|巨蟹座;CVn|Canes Venatici|Canum Venaticorum|猎犬座;CMa|Canis Major|Canis Majoris|大犬座;CMi|Canis Minor|Canis Minoris|小犬座;Cap|Capricornus|Capricorni|摩羯座;Car|Carina|Carinae|船底座;Cas|Cassiopeia|Cassiopeiae|仙后座;Cen|Centaurus|Centauri|半人马座;Cep|Cepheus|Cephei|仙王座;Cet|Cetus|Ceti|鲸鱼座;Cha|Chamaeleon|Chamaeleontis|蝘蜓座;Cir|Circinus|Circini|圆规座;Col|Columba|Columbae|天鸽座;Com|Coma Berenices|Comae Berenices|后发座;CrA|Corona Australis|Coronae Australis|南冕座;CrB|Corona Borealis|Coronae Borealis|北冕座;Crv|Corvus|Corvi|乌鸦座;Crt|Crater|Crateris|巨爵座;Cru|Crux|Crucis|南十字座;Cyg|Cygnus|Cygni|天鹅座;Del|Delphinus|Delphini|海豚座;Dor|Dorado|Doradus|剑鱼座;Dra|Draco|Draconis|天龙座;Equ|Equuleus|Equulei|小马座;Eri|Eridanus|Eridani|波江座;For|Fornax|Fornacis|天炉座;Gem|Gemini|Geminorum|双子座;Gru|Grus|Gruis|天鹤座;Her|Hercules|Herculis|武仙座;Hor|Horologium|Horologii|时钟座;Hya|Hydra|Hydrae|长蛇座;Hyi|Hydrus|Hydri|水蛇座;Ind|Indus|Indi|印第安座;Lac|Lacerta|Lacertae|蝎虎座;Leo|Leo|Leonis|狮子座;LMi|Leo Minor|Leonis Minoris|小狮座;Lep|Lepus|Leporis|天兔座;Lib|Libra|Librae|天秤座;Lup|Lupus|Lupi|豺狼座;Lyn|Lynx|Lyncis|天猫座;Lyr|Lyra|Lyrae|天琴座;Men|Mensa|Mensae|山案座;Mic|Microscopium|Microscopii|显微镜座;Mon|Monoceros|Monocerotis|麒麟座;Mus|Musca|Muscae|苍蝇座;Nor|Norma|Normae|矩尺座;Oct|Octans|Octantis|南极座;Oph|Ophiuchus|Ophiuchi|蛇夫座;Ori|Orion|Orionis|猎户座;Pav|Pavo|Pavonis|孔雀座;Peg|Pegasus|Pegasi|飞马座;Per|Perseus|Persei|英仙座;Phe|Phoenix|Phoenicis|凤凰座;Pic|Pictor|Pictoris|绘架座;Psc|Pisces|Piscium|双鱼座;PsA|Piscis Austrinus|Piscis Austrini|南鱼座;Pup|Puppis|Puppis|船尾座;Pyx|Pyxis|Pyxidis|罗盘座;Ret|Reticulum|Reticuli|网罟座;Sge|Sagitta|Sagittae|天箭座;Sgr|Sagittarius|Sagittarii|人马座;Sco|Scorpius|Scorpii|天蝎座;Scl|Sculptor|Sculptoris|玉夫座;Sct|Scutum|Scuti|盾牌座;Ser|Serpens|Serpentis|巨蛇座;Sex|Sextans|Sextantis|六分仪座;Tau|Taurus|Tauri|金牛座;Tel|Telescopium|Telescopii|望远镜座;Tri|Triangulum|Trianguli|三角座;TrA|Triangulum Australe|Trianguli Australis|南三角座;Tuc|Tucana|Tucanae|杜鹃座;UMa|Ursa Major|Ursae Majoris|大熊座;UMi|Ursa Minor|Ursae Minoris|小熊座;Vel|Vela|Velorum|船帆座;Vir|Virgo|Virginis|室女座;Vol|Volans|Volantis|飞鱼座;Vul|Vulpecula|Vulpeculae|狐狸座";
+    const WESTERN_CONSTELLATIONS = CONSTELLATION_ROWS.split(";").map(row => {
+      const [abbr, nominative, genitive, zh] = row.split("|");
+      return { abbr, nominative, genitive, zh };
+    });
+    const CONSTELLATION_BY_ABBR = new Map(WESTERN_CONSTELLATIONS.map(c => [c.abbr.toLowerCase(), c]));
+    const CONSTELLATION_BY_GENITIVE = new Map(WESTERN_CONSTELLATIONS.map(c => [normKey(c.genitive), c]));
+    const CONSTELLATION_BY_NOMINATIVE = new Map(WESTERN_CONSTELLATIONS.map(c => [normKey(c.nominative), c]));
+    const COMMON_CONSTELLATION_BY_HIP = { "54061":"UMa", "53910":"UMa", "58001":"UMa", "59774":"UMa", "62956":"UMa", "65378":"UMa", "67301":"UMa", "27989":"Ori", "25336":"Ori", "25930":"Ori", "26311":"Ori", "26727":"Ori", "27366":"Ori", "24436":"Ori", "80763":"Sco", "91262":"Lyr", "97649":"Aql", "65474":"Vir", "49669":"Leo", "102098":"Cyg", "30438":"CMa", "32349":"CMi", "69673":"Boo", "24608":"Aur", "21421":"Tau" };
+    const COMMON_CONSTELLATION_BY_NAME = { "vega":"Lyr", "altair":"Aql", "deneb":"Cyg", "dubhe":"UMa", "merak":"UMa", "phecda":"UMa", "megrez":"UMa", "alioth":"UMa", "mizar":"UMa", "alkaid":"UMa", "betelgeuse":"Ori", "bellatrix":"Ori", "mintaka":"Ori", "alnilam":"Ori", "alnitak":"Ori", "saiph":"Ori", "rigel":"Ori", "antares":"Sco", "spica":"Vir", "regulus":"Leo", "sirius":"CMa", "procyon":"CMi", "arcturus":"Boo", "capella":"Aur", "aldebaran":"Tau" };
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function toDatetimeLocal(date) { return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`; }
+    function dateFromInput() { return dtInput.value ? new Date(dtInput.value) : new Date(); }
+    function setNow() { dtInput.value = toDatetimeLocal(new Date()); render(); }
+    function degToRad(d) { return d * Math.PI / 180; }
+    function radToDeg(r) { return r * 180 / Math.PI; }
+    function normalizeDeg(d) { return ((d % 360) + 360) % 360; }
+    function julianDate(date) { return date.getTime() / 86400000 + 2440587.5; }
+    function gmstDeg(date) {
+      const jd = julianDate(date);
+      const d = jd - 2451545.0;
+      return normalizeDeg(280.46061837 + 360.98564736629 * d);
+    }
+    function altAz(raHours, decDeg, date, latDeg, lonDeg) {
+      const lst = normalizeDeg(gmstDeg(date) + lonDeg);
+      const raDeg = raHours * 15;
+      const ha = degToRad(normalizeDeg(lst - raDeg + 180) - 180);
+      const dec = degToRad(decDeg);
+      const lat = degToRad(latDeg);
+      const sinAlt = Math.sin(dec) * Math.sin(lat) + Math.cos(dec) * Math.cos(lat) * Math.cos(ha);
+      const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+      const y = -Math.sin(ha);
+      const x = Math.tan(dec) * Math.cos(lat) - Math.sin(lat) * Math.cos(ha);
+      const az = Math.atan2(y, x);
+      return { alt: radToDeg(alt), az: normalizeDeg(radToDeg(az)) };
+    }
+    function viewAzimuth(az) {
+      return normalizeDeg(az - state.viewAzOffset);
+    }
+    function azCanvasAngle(az) {
+      return degToRad(viewAzimuth(az));
+    }
+    function project(alt, az, cx, cy, radius) {
+      const r = (90 - alt) / 90 * radius * state.viewZoom;
+      const a = azCanvasAngle(az);
+      return { x: cx + r * Math.sin(a), y: cy - r * Math.cos(a) };
+    }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    function isMobileLayout() { return window.matchMedia && window.matchMedia("(max-width: 820px)").matches; }
+    function toast(msg, ms = 1900) {
+      if (!mobileToast) return;
+      mobileToast.textContent = msg;
+      mobileToast.classList.add("show");
+      clearTimeout(state.toastTimer);
+      state.toastTimer = setTimeout(() => mobileToast.classList.remove("show"), ms);
+    }
+    function lonToRaHours(lon) {
+      const raDeg = lon < 0 ? lon + 360 : lon;
+      return raDeg / 15;
+    }
+    function geoPointToEquatorial(pt) {
+      return { ra: lonToRaHours(Number(pt[0])), dec: Number(pt[1]) };
+    }
+    function readProp(obj, names, fallback="") {
+      if (!obj) return fallback;
+      for (const n of names) {
+        if (obj[n] !== undefined && obj[n] !== null && obj[n] !== "") return obj[n];
+      }
+      return fallback;
+    }
+    function normalizeHip(value) {
+      if (value === undefined || value === null) return "";
+      const text = String(value).trim();
+      const m = text.match(/(?:HIP\s*)?(\d{1,6})/i);
+      return m ? String(Number(m[1])) : "";
+    }
+    function normKey(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/α/g, "alpha").replace(/β/g, "beta").replace(/γ/g, "gamma").replace(/δ/g, "delta")
+        .replace(/ε/g, "epsilon").replace(/ζ/g, "zeta").replace(/η/g, "eta").replace(/θ/g, "theta")
+        .replace(/ι/g, "iota").replace(/κ/g, "kappa").replace(/λ/g, "lambda").replace(/μ/g, "mu")
+        .replace(/ν/g, "nu").replace(/ξ/g, "xi").replace(/ο/g, "omicron").replace(/π/g, "pi")
+        .replace(/ρ/g, "rho").replace(/σ/g, "sigma").replace(/τ/g, "tau").replace(/υ/g, "upsilon")
+        .replace(/φ/g, "phi").replace(/χ/g, "chi").replace(/ψ/g, "psi").replace(/ω/g, "omega")
+        .replace(/[^a-z0-9\u4e00-\u9fa5]/g, "");
+    }
+    function candidateKeysForStar(star) {
+      return [star.id, star.name, star.westernName, star.designation, star.bayer, star.flam, star.hd && `HD ${star.hd}`, star.hip && `HIP ${star.hip}`]
+        .map(normKey).filter(Boolean);
+    }
+    function starTitle(star) {
+      return star.zhName || star.name || star.westernName || star.designation || (star.hip ? `HIP ${star.hip}` : "未命名恒星");
+    }
+    function starWesternLabel(star) {
+      const parts = [];
+      if (star.westernName) parts.push(star.westernName);
+      if (star.designation && !parts.includes(star.designation)) parts.push(star.designation);
+      if (star.bayer && !parts.includes(star.bayer)) parts.push(star.bayer);
+      if (star.flam && !parts.includes(star.flam)) parts.push(star.flam);
+      if (star.hd) parts.push(`HD ${String(star.hd).replace(/^HD\s*/i, "")}`);
+      if (star.hip) parts.push(`HIP ${star.hip}`);
+      return parts.length ? parts.join(" ｜ ") : "—";
+    }
+    function lookupConstellation(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return null;
+      return CONSTELLATION_BY_ABBR.get(raw.toLowerCase())
+        || CONSTELLATION_BY_GENITIVE.get(normKey(raw))
+        || CONSTELLATION_BY_NOMINATIVE.get(normKey(raw))
+        || null;
+    }
+    function extractConstellationToken(text) {
+      if (!text) return "";
+      const raw = String(text).trim();
+      const parts = raw.replace(/[()\[\],;_]/g, " ").split(/\s+/).filter(Boolean);
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const token = parts[i].replace(/[^A-Za-z]/g, "");
+        if (token && CONSTELLATION_BY_ABBR.has(token.toLowerCase())) return token;
+      }
+      const nk = normKey(raw);
+      const byLength = [...WESTERN_CONSTELLATIONS].sort((a,b) => b.genitive.length - a.genitive.length);
+      for (const c of byLength) {
+        if (nk.includes(normKey(c.genitive))) return c.abbr;
+        if (nk.includes(normKey(c.nominative))) return c.abbr;
+      }
+      const compact = raw.replace(/[^A-Za-z]/g, " ").split(/\s+/).filter(Boolean);
+      for (const token of compact) {
+        const c = lookupConstellation(token);
+        if (c) return c.abbr;
+      }
+      return "";
+    }
+    function raHoursToGeoLon(raHours) {
+      const deg = normalizeDeg(Number(raHours) * 15);
+      return deg > 180 ? deg - 360 : deg;
+    }
+    function pointInRing(point, ring) {
+      const x = point[0], y = point[1];
+      let inside = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const xi = ring[i][0], yi = ring[i][1];
+        const xj = ring[j][0], yj = ring[j][1];
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-12) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+    function geometryToRings(geometry) {
+      if (!geometry) return [];
+      if (geometry.type === "Polygon") return (geometry.coordinates || []).slice(0, 1);
+      if (geometry.type === "MultiPolygon") return (geometry.coordinates || []).map(poly => poly && poly[0]).filter(Boolean);
+      if (geometry.type === "GeometryCollection") return (geometry.geometries || []).flatMap(geometryToRings);
+      return [];
+    }
+    function parseWesternConstellationBorders(geo) {
+      const items = [];
+      for (const f of (geo.features || [])) {
+        const p = f.properties || {};
+        const rawValues = [f.id, p.id, p.ids, p.abbr, p.con, p.const, p.name, p.n, p.desig, p.iau, p.constellation].filter(Boolean);
+        let c = null;
+        for (const v of rawValues) { c = lookupConstellation(v) || (extractConstellationToken(v) && lookupConstellation(extractConstellationToken(v))); if (c) break; }
+        const rings = geometryToRings(f.geometry);
+        if (c && rings.length) items.push({ c, rings });
+      }
+      return items;
+    }
+    function parseWesternConstellationCenters(geo) {
+      const items = [];
+      for (const f of (geo.features || [])) {
+        const p = f.properties || {};
+        const rawValues = [f.id, p.id, p.ids, p.abbr, p.con, p.const, p.name, p.n, p.desig, p.iau, p.constellation].filter(Boolean);
+        let c = null;
+        for (const v of rawValues) { c = lookupConstellation(v) || (extractConstellationToken(v) && lookupConstellation(extractConstellationToken(v))); if (c) break; }
+        if (c && f.geometry && f.geometry.type === "Point" && Array.isArray(f.geometry.coordinates)) {
+          const eq = geoPointToEquatorial(f.geometry.coordinates);
+          items.push({ c, ra: eq.ra, dec: eq.dec });
+        }
+      }
+      return items;
+    }
+    function constellationFromBorders(star) {
+      if (!state.constellationBorders.length) return null;
+      const lon = raHoursToGeoLon(star.ra);
+      const dec = Number(star.dec);
+      const candidates = [[lon, dec], [lon + 360, dec], [lon - 360, dec]];
+      for (const item of state.constellationBorders) {
+        for (const ring of item.rings) {
+          for (const pt of candidates) {
+            if (pointInRing(pt, ring)) return item.c;
+          }
+        }
+      }
+      return null;
+    }
+    function constellationFromCenters(star) {
+      if (!state.constellationCenters.length) return null;
+      let best = null;
+      for (const item of state.constellationCenters) {
+        const d = angularSepDeg(star, item);
+        if (!best || d < best.d) best = { c: item.c, d };
+      }
+      return best && best.d < 35 ? best.c : null;
+    }
+    function westernConstellationInfo(star) {
+      const direct = String(star.constellation || star.constellationAbbr || "").trim();
+      let c = lookupConstellation(direct);
+      if (!c) {
+        const candidates = [star.designation, star.bayer, star.flam, star.name, star.westernName].filter(Boolean);
+        for (const value of candidates) {
+          const token = extractConstellationToken(value);
+          if (token) { c = lookupConstellation(token); break; }
+        }
+      }
+      if (!c && star.hip && COMMON_CONSTELLATION_BY_HIP[String(Number(star.hip))]) c = lookupConstellation(COMMON_CONSTELLATION_BY_HIP[String(Number(star.hip))]);
+      if (!c && star.westernName && COMMON_CONSTELLATION_BY_NAME[String(star.westernName).toLowerCase()]) c = lookupConstellation(COMMON_CONSTELLATION_BY_NAME[String(star.westernName).toLowerCase()]);
+      if (!c) c = constellationFromBorders(star);
+      if (!c) c = constellationFromCenters(star);
+      return c || null;
+    }
+    function constellationLabel(star) {
+      const c = westernConstellationInfo(star);
+      return c ? c.zh + " / " + c.nominative + "（" + c.abbr + "；拉丁属格 " + c.genitive + "）" : "—";
+    }
+    function westernNameBreakdown(star) {
+      const rows = [];
+      if (star.westernName) rows.push(`常用名：${star.westernName}`);
+      if (star.designation) rows.push(`完整编号/IAU designation：${star.designation}`);
+      if (star.bayer) rows.push(`Bayer：${star.bayer}`);
+      if (star.flam) rows.push(`Flamsteed：${star.flam}`);
+      if (star.hd) rows.push(`HD：${String(star.hd).replace(/^HD\s*/i, "")}`);
+      if (star.hip) rows.push(`HIP：${star.hip}`);
+      return rows.length ? rows.join("；") : "—";
+    }
+    function starKeyFromCoord(star) {
+      return `${Number(star.ra).toFixed(4)},${Number(star.dec).toFixed(4)}`;
+    }
+    function asNumber(x, fallback=NaN) {
+      const n = Number(x);
+      return Number.isFinite(n) ? n : fallback;
+    }
+    function flattenCoords(geometry) {
+      if (!geometry) return [];
+      if (geometry.type === "Point") return [geometry.coordinates];
+      if (geometry.type === "LineString") return geometry.coordinates;
+      if (geometry.type === "MultiLineString") return geometry.coordinates.flat();
+      return [];
+    }
+
+    async function fetchJson(url, timeoutMs = 13000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { signal: controller.signal, cache: "force-cache" });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return await res.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    async function fetchText(url, timeoutMs = 13000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { signal: controller.signal, cache: "force-cache" });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return await res.text();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function parseStars(geo) {
+      const stars = [];
+      for (const f of (geo.features || [])) {
+        const p = f.properties || {};
+        const c = f.geometry && f.geometry.coordinates;
+        if (!Array.isArray(c)) continue;
+        const eq = geoPointToEquatorial(c);
+        const mag = asNumber(readProp(p, ["mag", "magnitude", "vmag", "Vmag"], 6), 6);
+        const rawId = String(readProp(p, ["id", "hip", "HIP", "desig", "name"], stars.length));
+        const hip = normalizeHip(readProp(p, ["hip", "HIP", "id"], ""));
+        const westernName = String(readProp(p, ["name", "proper", "properName"], ""));
+        stars.push({
+          uid: `star-${stars.length}-${rawId}`,
+          id: rawId,
+          hip,
+          name: westernName || rawId,
+          westernName: westernName || "",
+          designation: String(readProp(p, ["desig", "designation", "id", "iau", "proper"], "")),
+          bayer: String(readProp(p, ["bayer", "bf", "bayer_flamsteed"], "")),
+          flam: String(readProp(p, ["flam", "flamsteed"], "")),
+          hd: String(readProp(p, ["hd", "HD"], "")),
+          constellation: String(readProp(p, ["con", "const", "constellation", "iau_constellation", "constellation_name", "constellationName"], "")),
+          constellationAbbr: String(readProp(p, ["con", "const", "abbr", "iau", "constellation_abbr"], "")),
+          ra: eq.ra,
+          dec: eq.dec,
+          mag,
+          bv: asNumber(readProp(p, ["bv", "B-V"], NaN), NaN),
+          br: asNumber(readProp(p, ["br"], NaN), NaN)
+        });
+      }
+      return stars;
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [], cell = "", inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+        if (ch === '"') {
+          if (inQuotes && next === '"') { cell += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (ch === ',' && !inQuotes) {
+          row.push(cell); cell = "";
+        } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+          if (ch === '\r' && next === '\n') i++;
+          row.push(cell); cell = "";
+          if (row.some(v => v.trim() !== "")) rows.push(row);
+          row = [];
+        } else {
+          cell += ch;
+        }
+      }
+      if (cell || row.length) { row.push(cell); if (row.some(v => v.trim() !== "")) rows.push(row); }
+      if (!rows.length) return [];
+      const headers = rows[0].map(h => h.trim());
+      return rows.slice(1).map(r => Object.fromEntries(headers.map((h, i) => [h, (r[i] || "").trim()])));
+    }
+
+    function parseChineseStarNamesFromGeo(geo) {
+      const arr = [];
+      for (const f of (geo.features || [])) {
+        const p = f.properties || {};
+        const c = f.geometry && f.geometry.coordinates;
+        const eq = Array.isArray(c) ? geoPointToEquatorial(c) : null;
+        arr.push({
+          hip: normalizeHip(readProp(p, ["id", "hip", "HIP"], "")),
+          zhName: String(readProp(p, ["name", "desig"], "")),
+          zhPinyin: String(readProp(p, ["pinyin"], "")),
+          zhMeaning: String(readProp(p, ["en", "english"], "")),
+          designation: String(readProp(p, ["desig", "designation"], "")),
+          ra: eq && eq.ra,
+          dec: eq && eq.dec
+        });
+      }
+      return arr;
+    }
+
+    function parseChineseStarNamesFromCsv(text) {
+      return parseCsv(text).map(r => ({
+        hip: normalizeHip(readProp(r, ["id", "hip", "HIP"], "")),
+        zhName: String(readProp(r, ["name", "desig"], "")),
+        zhPinyin: String(readProp(r, ["pinyin"], "")),
+        zhMeaning: String(readProp(r, ["en", "english"], "")),
+        designation: String(readProp(r, ["desig", "designation"], "")),
+        raw: r
+      }));
+    }
+
+    function parseWesternStarNamesCsv(text) {
+      const byHip = new Map();
+      const byKey = new Map();
+      const addKey = (k, rec) => {
+        const nk = normKey(k);
+        if (nk && !byKey.has(nk)) byKey.set(nk, rec);
+      };
+      for (const r of parseCsv(text)) {
+        const hip = normalizeHip(readProp(r, ["hip", "id", "HIP"], ""));
+        const rec = {
+          hip,
+          westernName: String(readProp(r, ["name", "proper", "en"], "")),
+          designation: String(readProp(r, ["desig", "designation"], "")),
+          bayer: String(readProp(r, ["bayer"], "")),
+          flam: String(readProp(r, ["flam"], "")),
+          variable: String(readProp(r, ["var"], "")),
+          gliese: String(readProp(r, ["gliese"], "")),
+          hd: String(readProp(r, ["hd"], "")),
+          constellation: String(readProp(r, ["con", "const", "constellation", "iau_constellation", "constellation_name"], "")),
+          constellationAbbr: String(readProp(r, ["con", "const", "abbr"], ""))
+        };
+        if (hip) byHip.set(hip, rec);
+        [rec.westernName, rec.designation, rec.bayer, rec.flam, rec.variable, rec.gliese, rec.hd && `HD ${rec.hd}`, hip && `HIP ${hip}`].forEach(k => addKey(k, rec));
+      }
+      return { byHip, byKey };
+    }
+
+    function angularSepDeg(a, b) {
+      const ra1 = degToRad(a.ra * 15), ra2 = degToRad(b.ra * 15);
+      const d1 = degToRad(a.dec), d2 = degToRad(b.dec);
+      const cos = Math.sin(d1)*Math.sin(d2) + Math.cos(d1)*Math.cos(d2)*Math.cos(ra1-ra2);
+      return radToDeg(Math.acos(Math.max(-1, Math.min(1, cos))));
+    }
+
+    function uniqueAsterismPoints(ast) {
+      const seen = new Set();
+      const pts = [];
+      for (const line of ast.lines || []) {
+        for (const p of line || []) {
+          if (!Number.isFinite(p.ra) || !Number.isFinite(p.dec)) continue;
+          const key = `${Number(p.ra).toFixed(5)},${Number(p.dec).toFixed(4)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          pts.push(p);
+        }
+      }
+      return pts;
+    }
+
+    function addAsterismMembership(star, ast, distanceDeg, source) {
+      if (!star || !ast) return;
+      if (!star.asterismMembership) star.asterismMembership = [];
+      const existing = star.asterismMembership.find(x => x.id === ast.id);
+      const rec = {
+        id: ast.id,
+        name: ast.name || ast.id,
+        pinyin: ast.pinyin || "",
+        en: ast.en || "",
+        distanceDeg: Number.isFinite(distanceDeg) ? distanceDeg : null,
+        source
+      };
+      if (existing) {
+        if (rec.distanceDeg !== null && (existing.distanceDeg === null || rec.distanceDeg < existing.distanceDeg)) existing.distanceDeg = rec.distanceDeg;
+        if (!existing.source.includes(source)) existing.source += ` + ${source}`;
+      } else {
+        star.asterismMembership.push(rec);
+      }
+    }
+
+    function nearestStarToEquatorialPoint(point, stars, thresholdDeg = 0.18) {
+      let best = null;
+      for (const star of stars) {
+        if (!Number.isFinite(star.ra) || !Number.isFinite(star.dec)) continue;
+        const dra = Math.abs((((star.ra - point.ra + 12) % 24 + 24) % 24) - 12) * 15;
+        const ddec = Math.abs(star.dec - point.dec);
+        if (dra > thresholdDeg * 3 || ddec > thresholdDeg * 3) continue;
+        const d = angularSepDeg(star, point);
+        if (d <= thresholdDeg && (!best || d < best.d)) best = { star, d };
+      }
+      return best;
+    }
+
+    function ordinalStemOfChineseStarName(name) {
+      return String(name || "")
+        .replace(/\s+/g, "")
+        .replace(/[零〇一二三四五六七八九十百千万0-9]+$/u, "")
+        .replace(/增$/u, "");
+    }
+
+    function inferAsterismsFromChineseStarName(star, asterisms) {
+      const zh = String(star.zhName || "").trim();
+      if (!zh) return [];
+      const stem = ordinalStemOfChineseStarName(zh);
+      const hits = [];
+      for (const ast of asterisms) {
+        const n = String(ast.name || "").trim();
+        if (!n) continue;
+        const exact = stem === n;
+        const twoCharPrefix = n.length >= 2 && zh.startsWith(n);
+        const xiuPrefix = n.length === 1 && zh.startsWith(n + "宿");
+        if (exact || twoCharPrefix || xiuPrefix) hits.push(ast);
+      }
+      return hits;
+    }
+
+    function buildStarAsterismMembership(stars, asterisms) {
+      for (const star of stars) star.asterismMembership = [];
+
+      for (const ast of asterisms) {
+        for (const point of uniqueAsterismPoints(ast)) {
+          const nearest = nearestStarToEquatorialPoint(point, stars, 0.25);
+          if (nearest) addAsterismMembership(nearest.star, ast, nearest.d, "星官连线成员点");
+        }
+      }
+
+      for (const star of stars) {
+        for (const ast of inferAsterismsFromChineseStarName(star, asterisms)) {
+          addAsterismMembership(star, ast, null, "中文星名推断");
+        }
+        star.asterismMembership.sort((a, b) => {
+          const da = a.distanceDeg === null ? 999 : a.distanceDeg;
+          const db = b.distanceDeg === null ? 999 : b.distanceDeg;
+          return da - db || String(a.name).localeCompare(String(b.name), "zh-Hans-CN");
+        });
+      }
+      return stars.filter(s => s.asterismMembership && s.asterismMembership.length).length;
+    }
+
+    function starAsterismMembershipText(star) {
+      const ms = star.asterismMembership || [];
+      if (!ms.length) return "暂无明确所属星官；下面仅显示附近星官作为参考。";
+      return ms.map(m => {
+        const parts = [m.name];
+        if (m.pinyin) parts.push(`(${m.pinyin})`);
+        if (m.en) parts.push(`/ ${m.en}`);
+        if (m.distanceDeg !== null) parts.push(`｜匹配误差 ${m.distanceDeg.toFixed(3)}°`);
+        parts.push(`｜来源：${m.source}`);
+        return parts.join(" ");
+      }).join("；");
+    }
+
+    function mergeStarNames(stars, chineseNames, westernIndex) {
+      const cnByHip = new Map();
+      const cnByKey = new Map();
+      const addCnKey = (k, rec) => {
+        const nk = normKey(k);
+        if (nk && !cnByKey.has(nk)) cnByKey.set(nk, rec);
+      };
+      for (const n of chineseNames) {
+        if (n.hip) cnByHip.set(n.hip, n);
+        [n.zhName, n.designation, n.hip && `HIP ${n.hip}`].forEach(k => addCnKey(k, n));
+      }
+      const westByHip = westernIndex?.byHip || new Map();
+      const westByKey = westernIndex?.byKey || new Map();
+      let chinese = 0, western = 0;
+      for (const star of stars) {
+        const keys = candidateKeysForStar(star);
+        let west = star.hip ? westByHip.get(star.hip) : null;
+        if (!west) {
+          for (const k of keys) { if (westByKey.has(k)) { west = westByKey.get(k); break; } }
+        }
+        if (west) {
+          if (west.hip && !star.hip) star.hip = west.hip;
+          for (const k of ["westernName", "designation", "bayer", "flam", "variable", "gliese", "hd", "constellation", "constellationAbbr"]) {
+            if (west[k] && !star[k]) star[k] = west[k];
+          }
+          western++;
+        }
+
+        let cn = star.hip ? cnByHip.get(star.hip) : null;
+        if (!cn) {
+          const keys2 = candidateKeysForStar(star);
+          for (const k of keys2) { if (cnByKey.has(k)) { cn = cnByKey.get(k); break; } }
+        }
+        if (cn) {
+          star.hip = star.hip || cn.hip;
+          star.zhName = cn.zhName;
+          star.zhPinyin = cn.zhPinyin;
+          star.zhMeaning = cn.zhMeaning;
+          if (cn.designation && !star.designation) star.designation = cn.designation;
+          chinese++;
+        }
+      }
+      state.nameCoverage = { chinese, western };
+      return stars;
+    }
+
+    function parseChineseAsterisms(pointsGeo, linesGeo) {
+      const byId = new Map();
+      const ensure = (id) => {
+        if (!byId.has(id)) byId.set(id, { id, name: id, pinyin: "", en: "", center: null, lines: [] });
+        return byId.get(id);
+      };
+
+      for (const f of (pointsGeo.features || [])) {
+        const p = f.properties || {};
+        const id = String(readProp(p, ["id", "ids", "desig", "name"], byId.size + 1));
+        const a = ensure(id);
+        a.name = String(readProp(p, ["name", "desig"], a.name));
+        a.pinyin = String(readProp(p, ["pinyin", "pronounce"], a.pinyin));
+        a.en = String(readProp(p, ["en", "english"], a.en));
+        if (f.geometry && f.geometry.type === "Point") a.center = geoPointToEquatorial(f.geometry.coordinates);
+      }
+
+      for (const f of (linesGeo.features || [])) {
+        const p = f.properties || {};
+        const id = String(readProp(p, ["id", "ids", "desig", "name"], byId.size + 1));
+        const a = ensure(id);
+        a.name = String(readProp(p, ["name", "desig"], a.name));
+        a.en = String(readProp(p, ["en", "english"], a.en));
+        if (f.geometry && f.geometry.type === "LineString") {
+          a.lines.push(f.geometry.coordinates.map(geoPointToEquatorial));
+        } else if (f.geometry && f.geometry.type === "MultiLineString") {
+          for (const line of f.geometry.coordinates) a.lines.push(line.map(geoPointToEquatorial));
+        }
+        if (!a.center) {
+          const coords = flattenCoords(f.geometry);
+          if (coords.length) {
+            const mid = coords[Math.floor(coords.length / 2)];
+            a.center = geoPointToEquatorial(mid);
+          }
+        }
+      }
+
+      return Array.from(byId.values()).sort((a,b) => String(a.name).localeCompare(String(b.name), "zh-Hans-CN"));
+    }
+
+    async function loadFullData() {
+      try {
+        dataBadge.textContent = "正在载入全量星官与星名…";
+        loadStatus.innerHTML = "<strong>数据状态：</strong><br>正在加载星官、亮星、中国传统星名和西方星名数据。";
+        const [starsGeo, pointsGeo, linesGeo] = await Promise.all([
+          fetchJson(DATA_URLS.stars),
+          fetchJson(DATA_URLS.cnPoints),
+          fetchJson(DATA_URLS.cnLines)
+        ]);
+
+        let chineseNames = [];
+        let westernMap = new Map();
+        const optional = await Promise.allSettled([
+          fetchText(DATA_URLS.starNamesCnCsv),
+          fetchText(DATA_URLS.starNamesWestern),
+          fetchJson(DATA_URLS.westernBorders),
+          fetchJson(DATA_URLS.westernConstellationPoints)
+        ]);
+        if (optional[0].status === "fulfilled") chineseNames = parseChineseStarNamesFromCsv(optional[0].value);
+        if (optional[1].status === "fulfilled") westernMap = parseWesternStarNamesCsv(optional[1].value);
+        if (optional[2].status === "fulfilled") state.constellationBorders = parseWesternConstellationBorders(optional[2].value);
+        if (optional[3].status === "fulfilled") state.constellationCenters = parseWesternConstellationCenters(optional[3].value);
+
+        const stars = mergeStarNames(parseStars(starsGeo), chineseNames, westernMap);
+        state.nameCoverage.constellations = stars.filter(s => westernConstellationInfo(s)).length;
+        const asterisms = parseChineseAsterisms(pointsGeo, linesGeo);
+        state.nameCoverage.memberships = buildStarAsterismMembership(stars, asterisms);
+        if (stars.length < 100 || asterisms.length < 100) throw new Error("在线数据不完整");
+        state.stars = stars;
+        state.asterisms = asterisms;
+        state.dataMode = "full";
+        state.selectedType = "asterism";
+        state.selectedStarUid = null;
+        state.selectedId = (asterisms.find(a => a.name === "北斗") || asterisms[0]).id;
+        dataBadge.textContent = `已载入：${asterisms.length} 个星官 / ${stars.length} 颗亮星`;
+        loadStatus.innerHTML = `<strong>数据状态：</strong><br><span class="ok">已载入全量在线数据。</span><br>星官：${asterisms.length}；有连线星官：${asterisms.filter(a => a.lines.length).length}；亮星：${stars.length}。<br>可点击星名覆盖：中文 ${state.nameCoverage.chinese} 颗；西方 ${state.nameCoverage.western} 颗；明确星官归属 ${state.nameCoverage.memberships} 颗。`;
+        render();
+      } catch (err) {
+        console.warn(err);
+        state.dataMode = "fallback";
+        state.selectedType = "asterism";
+        dataBadge.textContent = "离线示例模式";
+        loadStatus.innerHTML = `<strong>数据状态：</strong><br><span class="warn">在线数据加载失败，已退回内置示例。</span><br>原因可能是未联网、浏览器拦截跨域请求，或数据源临时不可用。`;
+        render();
+      }
+    }
+
+    function currentStats(ast, date, lat, lon) {
+      const pts = [];
+      if (ast.center) pts.push(ast.center);
+      for (const line of ast.lines || []) for (const p of line) pts.push(p);
+      let visible = 0;
+      for (const p of pts) if (altAz(p.ra, p.dec, date, lat, lon).alt > 0) visible++;
+      return { visible, total: pts.length || 0, isVisible: visible > 0 };
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(600, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(520, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawGrid(cx, cy, radius) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,.12)";
+      ctx.lineWidth = 1;
+      for (const alt of [30, 60]) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, (90-alt)/90*radius, 0, Math.PI*2);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(255,255,255,.16)";
+      for (let az=0; az<360; az+=30) {
+        const a = azCanvasAngle(az);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + radius * Math.sin(a), cy - radius * Math.cos(a));
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(255,255,255,.36)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,.74)";
+      ctx.font = "13px \"Times New Roman\", \"Songti SC\", SimSun, STSong, serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (const [label, az] of [["北",0],["东",90],["南",180],["西",270]]) {
+        const a = azCanvasAngle(az);
+        ctx.fillText(label, cx + (radius + 14) * Math.sin(a), cy - (radius + 14) * Math.cos(a));
+      }
+      if (state.orientationMode && Number.isFinite(state.lastHeading)) {
+        ctx.fillStyle = "rgba(244,208,111,.92)";
+        ctx.font = "bold 12px \"Times New Roman\", \"Songti SC\", SimSun, STSong, serif";
+        ctx.fillText(`手机指向 ${Math.round(state.lastHeading)}°`, cx, cy - radius + 22);
+      }
+      ctx.restore();
+    }
+
+    function drawStars(date, lat, lon, cx, cy, radius) {
+      state.starScreen = [];
+      const limit = Number(magLimit.value);
+      const selectedUid = state.selectedType === "star" ? state.selectedStarUid : null;
+      let selectedDraw = null;
+      for (const s of state.stars) {
+        if (!Number.isFinite(s.ra) || !Number.isFinite(s.dec) || s.mag > limit) continue;
+        const aa = altAz(s.ra, s.dec, date, lat, lon);
+        if (aa.alt <= 0) continue;
+        const p = project(aa.alt, aa.az, cx, cy, radius);
+        const br = Math.max(0.18, 1 - s.mag / 6.5);
+        const r = Math.max(1.2, 4.2 - s.mag * 0.45);
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(240, 248, 255, ${0.28 + br * 0.72})`;
+        ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+        ctx.fill();
+        state.starScreen.push({ uid: s.uid, star: s, x: p.x, y: p.y, r: Math.max(8, r + 5) });
+        if (selectedUid && s.uid === selectedUid) selectedDraw = { star: s, x: p.x, y: p.y, r };
+      }
+      if (selectedDraw) {
+        const { star, x, y, r } = selectedDraw;
+        ctx.save();
+        ctx.strokeStyle = "rgba(244,208,111,.95)";
+        ctx.lineWidth = 2.2;
+        ctx.shadowColor = "rgba(244,208,111,.70)";
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 8, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.font = "bold 13px \"Times New Roman\", \"Songti SC\", SimSun, STSong, serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "rgba(3,6,14,.82)";
+        ctx.fillStyle = "#f4d06f";
+        const label = starTitle(star);
+        ctx.strokeText(label, x, y - 18);
+        ctx.fillText(label, x, y - 18);
+        ctx.restore();
+      }
+    }
+
+    function drawAsterisms(date, lat, lon, cx, cy, radius) {
+      state.asterismScreen.clear();
+      const selected = state.asterisms.find(a => a.id === state.selectedId);
+
+      if (showLines.checked) {
+        for (const ast of state.asterisms) {
+          const isSel = state.selectedType === "asterism" && selected && ast.id === selected.id;
+          if (!ast.lines || !ast.lines.length) continue;
+          ctx.save();
+          ctx.strokeStyle = isSel ? "rgba(244,208,111,.90)" : "rgba(139,211,255,.30)";
+          ctx.lineWidth = isSel ? 2.4 : 1.1;
+          ctx.shadowColor = isSel ? "rgba(244,208,111,.4)" : "transparent";
+          ctx.shadowBlur = isSel ? 12 : 0;
+          for (const line of ast.lines) {
+            for (let i=0; i<line.length-1; i++) {
+              const a0 = altAz(line[i].ra, line[i].dec, date, lat, lon);
+              const a1 = altAz(line[i+1].ra, line[i+1].dec, date, lat, lon);
+              if (a0.alt <= 0 && a1.alt <= 0) continue;
+              const p0 = project(Math.max(0, a0.alt), a0.az, cx, cy, radius);
+              const p1 = project(Math.max(0, a1.alt), a1.az, cx, cy, radius);
+              ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+            }
+          }
+          ctx.restore();
+        }
+      }
+
+      if (showLabels.checked) {
+        const labelCandidates = [];
+        for (const ast of state.asterisms) {
+          if (!ast.center) continue;
+          const aa = altAz(ast.center.ra, ast.center.dec, date, lat, lon);
+          if (aa.alt <= 0) continue;
+          const p = project(aa.alt, aa.az, cx, cy, radius);
+          labelCandidates.push({ ast, p, alt: aa.alt });
+        }
+        labelCandidates.sort((a,b) => b.alt - a.alt);
+        const drawn = [];
+        for (const item of labelCandidates) {
+          const {ast, p} = item;
+          let overlap = false;
+          for (const d of drawn) {
+            if (Math.hypot(d.x-p.x, d.y-p.y) < 28) { overlap = true; break; }
+          }
+          if (overlap && ast.id !== state.selectedId) continue;
+          drawn.push(p);
+          const isSel = state.selectedType === "asterism" && ast.id === state.selectedId;
+          ctx.save();
+          ctx.font = isSel ? "bold 16px \"Times New Roman\", \"Songti SC\", SimSun, STSong, serif" : "12px \"Times New Roman\", \"Songti SC\", SimSun, STSong, serif";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "rgba(3,6,14,.78)";
+          ctx.fillStyle = isSel ? "#f4d06f" : "rgba(238,243,255,.72)";
+          ctx.strokeText(ast.name, p.x, p.y - 13);
+          ctx.fillText(ast.name, p.x, p.y - 13);
+          ctx.restore();
+          state.asterismScreen.set(ast.id, { x:p.x, y:p.y, ast });
+        }
+      }
+    }
+
+    function render() {
+      resizeCanvas();
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      const date = dateFromInput();
+      const lat = Number(latInput.value);
+      const lon = Number(lonInput.value);
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = Math.min(w, h) * (isMobileLayout() ? 0.48 : 0.43);
+
+      const grd = ctx.createRadialGradient(cx, cy, radius*0.05, cx, cy, radius*1.05);
+      grd.addColorStop(0, "rgba(40,55,100,.62)");
+      grd.addColorStop(0.70, "rgba(13,20,43,.98)");
+      grd.addColorStop(1, "rgba(3,6,14,1)");
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+
+      drawGrid(cx, cy, radius);
+      if (showStars.checked) drawStars(date, lat, lon, cx, cy, radius);
+      drawAsterisms(date, lat, lon, cx, cy, radius);
+
+      placeLabel.textContent = `${cities[preset.value]?.name || "自定义"}｜${lat.toFixed(3)}°, ${lon.toFixed(3)}°`;
+      timeLabel.textContent = date.toLocaleString("zh-CN", { hour12:false }) + (state.orientationMode && Number.isFinite(state.lastHeading) ? `｜指向 ${Math.round(state.lastHeading)}°` : "");
+      if (mapHint) mapHint.textContent = state.orientationMode ? "指南针模式：手机顶部约等于你正在看的方向；点击星星查看名称。" : "拖动可旋转星图，双指可缩放；点击星星查看名称。";
+      if (compassFab) compassFab.classList.toggle("active", state.orientationMode);
+      magText.textContent = Number(magLimit.value).toFixed(1);
+      updateDetail();
+      updateList();
+    }
+
+    function findSelectedStar() {
+      return state.stars.find(s => s.uid === state.selectedStarUid) || null;
+    }
+
+    function nearestAsterismsForStar(star, maxItems = 4) {
+      const candidates = [];
+      for (const ast of state.asterisms) {
+        let best = Infinity;
+        const pts = [];
+        if (ast.center) pts.push(ast.center);
+        for (const line of ast.lines || []) for (const p of line) pts.push(p);
+        for (const p of pts) best = Math.min(best, angularSepDeg(star, p));
+        if (Number.isFinite(best)) candidates.push({ ast, d: best });
+      }
+      return candidates.sort((a,b) => a.d - b.d).slice(0, maxItems);
+    }
+
+    function formatCoordHours(ra) {
+      const h = Math.floor(ra);
+      const mFloat = (ra - h) * 60;
+      const m = Math.floor(mFloat);
+      const sec = Math.round((mFloat - m) * 60);
+      return `${h}h ${String(m).padStart(2,"0")}m ${String(sec).padStart(2,"0")}s`;
+    }
+
+    function formatDec(dec) {
+      const sign = dec >= 0 ? "+" : "−";
+      const v = Math.abs(dec);
+      const d = Math.floor(v);
+      const m = Math.floor((v-d)*60);
+      return `${sign}${d}° ${String(m).padStart(2,"0")}′`;
+    }
+
+    function updateDetail() {
+      if (state.selectedType === "star") {
+        const star = findSelectedStar();
+        if (!star) { state.selectedType = "asterism"; return updateDetail(); }
+        const date = dateFromInput();
+        const lat = Number(latInput.value);
+        const lon = Number(lonInput.value);
+        const aa = altAz(star.ra, star.dec, date, lat, lon);
+        const membership = star.asterismMembership || [];
+        const memberIds = new Set(membership.map(m => m.id));
+        const near = nearestAsterismsForStar(star)
+          .filter(x => !memberIds.has(x.ast.id))
+          .slice(0, 3)
+          .map(x => `${x.ast.name}（约 ${x.d.toFixed(1)}°）`).join("、") || "—";
+        detailName.textContent = starTitle(star);
+        detailPinyin.textContent = [star.zhPinyin, star.westernName].filter(Boolean).join(" ｜ ");
+        detailTag.textContent = "恒星 Star";
+        detailEnglishLabel.textContent = "西方名称 / 现代编号";
+        detailConstellationLabel.textContent = "现代星座";
+        detailVisibleLabel.textContent = "当前可见性";
+        detailStructureLabel.textContent = "所属中国星官";
+        detailEnglish.textContent = westernNameBreakdown(star);
+        detailConstellation.textContent = constellationLabel(star);
+        detailVisible.textContent = aa.alt > 0
+          ? `当前在地平线上方：高度角 ${aa.alt.toFixed(1)}°，方位角 ${aa.az.toFixed(1)}°；视星等 ${Number.isFinite(star.mag) ? star.mag.toFixed(2) : "—"}`
+          : `当前在地平线下：高度角 ${aa.alt.toFixed(1)}°；视星等 ${Number.isFinite(star.mag) ? star.mag.toFixed(2) : "—"}`;
+        detailStructure.textContent = starAsterismMembershipText(star);
+        const c = westernConstellationInfo(star);
+        const bayerHint = star.designation && c ? `例如 ${star.designation} 中的 ${c.genitive} 表示它属于 ${c.zh} / ${c.nominative}；前面的希腊字母是 Bayer 命名。` : "";
+        const coordText = `RA: ${formatCoordHours(star.ra)}；Dec: ${formatDec(star.dec)}；视星等: ${Number.isFinite(star.mag) ? star.mag.toFixed(2) : "—"}`;
+        const membershipNote = membership.length
+          ? "所属星官优先根据星官连线中的成员星匹配得到；必要时再用中文星名推断。"
+          : `没有找到明确成员关系，所以只列附近星官/参考点：${near}。`;
+        detailDesc.textContent = `中文星名：${star.zhName || "暂无"}${star.zhMeaning ? `（英文释义：${star.zhMeaning}）` : ""}。${membershipNote} ${coordText}。${bayerHint}`;
+        return;
+      }
+
+      const ast = state.asterisms.find(a => a.id === state.selectedId) || state.asterisms[0];
+      if (!ast) return;
+      const date = dateFromInput();
+      const lat = Number(latInput.value);
+      const lon = Number(lonInput.value);
+      const st = currentStats(ast, date, lat, lon);
+      detailName.textContent = ast.name || "未命名星官";
+      detailPinyin.textContent = ast.pinyin || "";
+      detailTag.textContent = state.dataMode === "full" ? "星官 Asterism" : "离线示例";
+      detailEnglishLabel.textContent = "英文释义";
+      detailConstellationLabel.textContent = "现代星座";
+      detailVisibleLabel.textContent = "当前可见性";
+      detailStructureLabel.textContent = "数据结构";
+      detailEnglish.textContent = ast.en || "—";
+      detailConstellation.textContent = "星官不是现代星座；可点击具体恒星查看其现代星座。";
+      detailVisible.textContent = st.total ? `${st.visible}/${st.total} 个参考点在地平线上方` : "暂无位置参考点";
+      detailStructure.textContent = `ID: ${ast.id}；连线组：${ast.lines?.length || 0}；标签点：${ast.center ? "有" : "无"}`;
+      detailDesc.textContent = state.dataMode === "full"
+        ? "这个条目来自公开星图数据。当前 demo 已经导入星官名称、英文释义、标签位置和连线；点击画面中的具体星星，可以查看每颗星的中文星名、西方名称/编号、现代星座与所属中国星官。"
+        : "当前为离线示例数据，只包含少量代表性星官与星名。联网后刷新网页即可尝试加载完整中国传统星官和星名数据。";
+    }
+
+    function updateList() {
+      const date = dateFromInput();
+      const lat = Number(latInput.value);
+      const lon = Number(lonInput.value);
+      const q = searchBox.value.trim().toLowerCase();
+      let items = state.asterisms.map(ast => ({ ast, stats: currentStats(ast, date, lat, lon) }));
+      if (q) {
+        items = items.filter(({ast}) => [ast.name, ast.pinyin, ast.en, ast.id].join(" ").toLowerCase().includes(q));
+      }
+      if (visibleOnly.checked) items = items.filter(x => x.stats.isVisible);
+      items.sort((a,b) => Number(b.stats.isVisible) - Number(a.stats.isVisible) || String(a.ast.name).localeCompare(String(b.ast.name), "zh-Hans-CN"));
+      listSummary.textContent = `显示 ${items.length} / ${state.asterisms.length} 个星官`;
+      listEl.innerHTML = "";
+      for (const {ast, stats} of items) {
+        const div = document.createElement("div");
+        div.className = "item" + (state.selectedType === "asterism" && ast.id === state.selectedId ? " active" : "");
+        div.innerHTML = `<div><div class="name">${escapeHtml(ast.name || ast.id)}</div><div class="sub">${escapeHtml(ast.pinyin || ast.en || "")}</div></div><div class="${stats.isVisible ? "visible" : "hidden"}">${stats.isVisible ? "可见" : "地平线下"}</div>`;
+        div.addEventListener("click", () => { state.selectedType = "asterism"; state.selectedId = ast.id; if (isMobileLayout()) { document.body.classList.add("detail-open"); document.body.classList.remove("settings-open"); } render(); });
+        listEl.appendChild(div);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));
+    }
+
+
+
+    async function useCurrentLocation() {
+      if (!navigator.geolocation) { toast("当前浏览器不支持定位"); return; }
+      toast("正在获取手机位置…");
+      navigator.geolocation.getCurrentPosition(pos => {
+        const { latitude, longitude } = pos.coords;
+        preset.value = "custom";
+        latInput.value = latitude.toFixed(5);
+        lonInput.value = longitude.toFixed(5);
+        toast("已使用当前位置");
+        render();
+      }, err => {
+        toast("无法获取定位：请检查浏览器定位权限");
+        console.warn(err);
+      }, { enableHighAccuracy:true, timeout:9000, maximumAge:60000 });
+    }
+
+    function headingFromEvent(ev) {
+      if (typeof ev.webkitCompassHeading === "number") return ev.webkitCompassHeading;
+      if (typeof ev.alpha === "number") return normalizeDeg(360 - ev.alpha);
+      return null;
+    }
+
+    function handleOrientation(ev) {
+      if (!state.orientationMode) return;
+      const h = headingFromEvent(ev);
+      if (h === null) return;
+      state.lastHeading = h;
+      state.viewAzOffset = h;
+      render();
+    }
+
+    async function toggleCompassMode() {
+      if (state.orientationMode) {
+        state.orientationMode = false;
+        toast("已关闭指南针模式");
+        render();
+        return;
+      }
+      try {
+        if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission !== "granted") { toast("未获得手机朝向权限"); return; }
+        }
+        state.orientationMode = true;
+        window.addEventListener("deviceorientationabsolute", handleOrientation, true);
+        window.addEventListener("deviceorientation", handleOrientation, true);
+        toast("指南针模式已开启");
+        render();
+      } catch (err) {
+        console.warn(err);
+        toast("无法开启指南针：请用手机 Safari/Chrome 并允许传感器权限");
+      }
+    }
+
+    function resetView() {
+      state.orientationMode = false;
+      state.viewAzOffset = 0;
+      state.viewZoom = 1;
+      toast("视图已重置：上北下南");
+      render();
+    }
+
+    function setSheet(which) {
+      if (which === "settings") {
+        document.body.classList.toggle("settings-open");
+        document.body.classList.remove("detail-open");
+      } else if (which === "detail") {
+        document.body.classList.toggle("detail-open");
+        document.body.classList.remove("settings-open");
+      } else {
+        document.body.classList.remove("settings-open", "detail-open");
+      }
+    }
+
+    function initTouchGestures() {
+      let oneStart = null;
+      let pinchStart = null;
+      let startOffset = 0;
+      let startZoom = 1;
+      canvas.addEventListener("touchstart", ev => {
+        state.touchMoved = false;
+        if (ev.touches.length === 1) {
+          oneStart = { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
+          startOffset = state.viewAzOffset;
+        } else if (ev.touches.length === 2) {
+          const dx = ev.touches[0].clientX - ev.touches[1].clientX;
+          const dy = ev.touches[0].clientY - ev.touches[1].clientY;
+          pinchStart = Math.hypot(dx, dy);
+          startZoom = state.viewZoom;
+        }
+      }, { passive:false });
+      canvas.addEventListener("touchmove", ev => {
+        if (ev.touches.length === 1 && oneStart && !state.orientationMode) {
+          ev.preventDefault();
+          const dx = ev.touches[0].clientX - oneStart.x;
+          const dy = ev.touches[0].clientY - oneStart.y;
+          if (Math.hypot(dx, dy) > 6) state.touchMoved = true;
+          state.viewAzOffset = normalizeDeg(startOffset - dx * 0.45);
+          render();
+        } else if (ev.touches.length === 2 && pinchStart) {
+          ev.preventDefault();
+          const dx = ev.touches[0].clientX - ev.touches[1].clientX;
+          const dy = ev.touches[0].clientY - ev.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          state.touchMoved = true;
+          state.viewZoom = clamp(startZoom * dist / pinchStart, 0.75, 2.5);
+          render();
+        }
+      }, { passive:false });
+      canvas.addEventListener("touchend", () => { oneStart = null; pinchStart = null; setTimeout(() => state.touchMoved = false, 80); }, { passive:true });
+      canvas.addEventListener("wheel", ev => {
+        ev.preventDefault();
+        state.viewZoom = clamp(state.viewZoom * (ev.deltaY > 0 ? 0.92 : 1.08), 0.75, 2.5);
+        render();
+      }, { passive:false });
+    }
+
+    function initEvents() {
+      preset.addEventListener("change", () => {
+        const c = cities[preset.value];
+        if (c) { latInput.value = c.lat; lonInput.value = c.lon; }
+        render();
+      });
+      [latInput, lonInput, dtInput, showStars, showLines, showLabels, visibleOnly, magLimit, searchBox].forEach(el => {
+        el.addEventListener("input", render);
+        el.addEventListener("change", render);
+      });
+      nowBtn.addEventListener("click", setNow);
+      plusBtn.addEventListener("click", () => { const d = dateFromInput(); d.setHours(d.getHours()+1); dtInput.value = toDatetimeLocal(d); render(); });
+      minusBtn.addEventListener("click", () => { const d = dateFromInput(); d.setHours(d.getHours()-1); dtInput.value = toDatetimeLocal(d); render(); });
+      playBtn.addEventListener("click", () => {
+        state.playing = !state.playing;
+        playBtn.textContent = state.playing ? "暂停" : "播放时间";
+        if (state.playing) {
+          state.playTimer = setInterval(() => { const d = dateFromInput(); d.setMinutes(d.getMinutes()+20); dtInput.value = toDatetimeLocal(d); render(); }, 900);
+        } else {
+          clearInterval(state.playTimer);
+        }
+      });
+      if (settingsFab) settingsFab.addEventListener("click", () => setSheet("settings"));
+      if (detailFab) detailFab.addEventListener("click", () => setSheet("detail"));
+      if (locateFab) locateFab.addEventListener("click", useCurrentLocation);
+      if (compassFab) compassFab.addEventListener("click", toggleCompassMode);
+      if (resetViewFab) resetViewFab.addEventListener("click", resetView);
+      initTouchGestures();
+      canvas.addEventListener("click", ev => {
+        if (state.touchMoved) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = ev.clientX - rect.left;
+        const y = ev.clientY - rect.top;
+        let bestStar = null;
+        for (const item of state.starScreen) {
+          const d = Math.hypot(item.x - x, item.y - y);
+          if (d <= item.r && (!bestStar || d < bestStar.d)) bestStar = { uid: item.uid, d };
+        }
+        if (bestStar) {
+          state.selectedType = "star";
+          state.selectedStarUid = bestStar.uid;
+          if (isMobileLayout()) { document.body.classList.add("detail-open"); document.body.classList.remove("settings-open"); }
+          render();
+          return;
+        }
+        let best = null;
+        for (const [id, item] of state.asterismScreen.entries()) {
+          const d = Math.hypot(item.x - x, item.y - y);
+          if (d < 24 && (!best || d < best.d)) best = { id, d };
+        }
+        if (best) { state.selectedType = "asterism"; state.selectedId = best.id; if (isMobileLayout()) { document.body.classList.add("detail-open"); document.body.classList.remove("settings-open"); } render(); }
+      });
+      window.addEventListener("resize", render);
+    }
+
+    function init() {
+      latInput.value = cities.lausanne.lat;
+      lonInput.value = cities.lausanne.lon;
+      dtInput.value = toDatetimeLocal(new Date());
+      initEvents();
+      state.nameCoverage.memberships = buildStarAsterismMembership(state.stars, state.asterisms);
+      render();
+      if ("serviceWorker" in navigator && location.protocol !== "file:") { navigator.serviceWorker.register("service-worker.js").catch(console.warn); }
+      loadFullData();
+    }
+    init();
+  </script>
+</body>
+</html>
