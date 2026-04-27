@@ -37,7 +37,7 @@ const CONSTS=CONST_ROWS.split(";").map(r=>{const [abbr,name,gen,zh]=r.split("|")
 const CONST_BY_ABBR=new Map(CONSTS.map(c=>[c.abbr.toLowerCase(),c]));
 const CONST_BY_GEN=new Map(CONSTS.map(c=>[normKey(c.gen),c]));
 const commonConstByHip={"54061":"UMa","53910":"UMa","58001":"UMa","59774":"UMa","62956":"UMa","65378":"UMa","67301":"UMa","27989":"Ori","24436":"Ori","26311":"Ori","80763":"Sco","91262":"Lyr","97649":"Aql","102098":"Cyg","65474":"Vir","30438":"CMa"};
-const state={stars:fallbackStars,asterisms:fallbackAsterisms,mode:"fallback",lat:46.5197,lon:6.6323,city:"洛桑",viewAz:0,viewPitch:28,fov:95,magLimit:6,sensor:false,camera:false,stream:null,drag:false,dragMoved:false,selected:null,screens:[],astScreens:[],constBorders:[],constCenters:[],coverage:{cn:0,west:0}};
+const state={stars:fallbackStars,asterisms:fallbackAsterisms,mode:"fallback",lat:46.5197,lon:6.6323,city:"洛桑",viewAz:0,viewPitch:28,pitchOffset:0,lastSensor:null,fov:95,magLimit:6,sensor:false,camera:false,stream:null,drag:false,dragMoved:false,selected:null,screens:[],astScreens:[],constBorders:[],constCenters:[],coverage:{cn:0,west:0}};
 const $=id=>document.getElementById(id);
 const canvas=$("sky"),ctx=canvas.getContext("2d"),camera=$("camera"),detail=$("detail"),settings=$("settings"),catalog=$("catalog"),toast=$("toast");
 function pad(n){return String(n).padStart(2,"0")} function toLocal(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`}
@@ -386,7 +386,8 @@ for(const a of state.asterisms){
     state.astScreens.push({a,x:anchor.x,y:anchor.y});
   }
 }}
-function render(){resize();drawBg();drawGrid();drawStars();drawAsterisms();$("status").innerHTML=`${state.sensor?"传感器":"手动"}｜${state.camera?"相机叠加":"纯星图"}<br>朝向 ${Math.round(state.viewAz)}°｜仰角 ${Math.round(state.viewPitch)}°｜${state.city}`;$("fovText").textContent=state.fov;$("magText").textContent=state.magLimit.toFixed(1)}
+function render(){resize();drawBg();drawGrid();drawStars();drawAsterisms();const sensorExtra=state.sensor&&state.lastSensor?`<br>alpha ${state.lastSensor.alpha}°｜beta ${state.lastSensor.beta}°｜gamma ${state.lastSensor.gamma}°`:"";
+$("status").innerHTML=`${state.sensor?"传感器":"手动"}｜${state.camera?"相机叠加":"纯星图"}<br>朝向 ${Math.round(state.viewAz)}°｜仰角 ${Math.round(state.viewPitch)}°｜${state.city}${sensorExtra}`;$("fovText").textContent=state.fov;if($("pitchOffsetText"))$("pitchOffsetText").textContent=state.pitchOffset;$("magText").textContent=state.magLimit.toFixed(1)}
 function showStar(s,aa){
 state.selected={type:"star",uid:s.uid};
 const know=getStarKnowledge(s);
@@ -444,14 +445,75 @@ canvas.addEventListener("pointerdown",e=>{if(state.sensor)return;state.drag=true
 canvas.addEventListener("pointermove",e=>{if(!state.drag||state.sensor)return;const dx=e.clientX-state.sx,dy=e.clientY-state.sy;if(Math.abs(dx)>2||Math.abs(dy)>2)state.dragMoved=true;state.viewAz=normDeg(state.baz-dx*.17*state.fov/90);state.viewPitch=clamp(state.bp+dy*.13*state.fov/90,-20,85);render()})
 canvas.addEventListener("pointerup",e=>{const moved=state.dragMoved;state.drag=false;if(moved)return;let best=null;for(const it of state.screens){const d=Math.hypot(it.x-e.clientX,it.y-e.clientY);if(d<it.r&&(!best||d<best.d))best={...it,d}}if(best)return showStar(best.s,best.aa);let ba=null;for(const it of state.astScreens){const d=Math.hypot(it.x-e.clientX,it.y-e.clientY);if(d<28&&(!ba||d<ba.d))ba={...it,d}}if(ba)return showAst(ba.a)})
 canvas.addEventListener("wheel",e=>{e.preventDefault();state.fov=clamp(state.fov+Math.sign(e.deltaY)*5,35,125);$("fov").value=state.fov;render()},{passive:false})
-$("fov").oninput=e=>{state.fov=Number(e.target.value);render()};$("magLimit").oninput=e=>{state.magLimit=Number(e.target.value);render()};$("now").onclick=()=>{$("dt").value=toLocal(new Date());render()};$("dt").oninput=render;$("lat").oninput=e=>{state.lat=Number(e.target.value);render()};$("lon").oninput=e=>{state.lon=Number(e.target.value);render()};
+$("fov").oninput=e=>{state.fov=Number(e.target.value);render()};if($("pitchOffset"))$("pitchOffset").oninput=e=>{state.pitchOffset=Number(e.target.value);render()};$("magLimit").oninput=e=>{state.magLimit=Number(e.target.value);render()};$("now").onclick=()=>{$("dt").value=toLocal(new Date());render()};$("dt").oninput=render;$("lat").oninput=e=>{state.lat=Number(e.target.value);render()};$("lon").oninput=e=>{state.lon=Number(e.target.value);render()};
 $("city").onchange=e=>{const c=cities[e.target.value];state.city=c.name;state.lat=c.lat;state.lon=c.lon;$("lat").value=c.lat;$("lon").value=c.lon;render()};
 $("detailBtn").onclick=()=>{detail.classList.toggle("on");$("detailBtn").classList.toggle("active",detail.classList.contains("on"))};
 $("settingsBtn").onclick=()=>{settings.classList.toggle("on");catalog.classList.remove("on")};$("closeSettings").onclick=()=>settings.classList.remove("on");
 $("catalogBtn").onclick=()=>{catalog.classList.toggle("on");settings.classList.remove("on");updateCatalog()};$("search").oninput=updateCatalog;
 $("northBtn").onclick=()=>{state.sensor=false;$("sensorBtn").classList.remove("active");state.viewAz=0;state.viewPitch=24;render()};
-$("sensorBtn").onclick=async()=>{if(state.sensor){state.sensor=false;$("sensorBtn").classList.remove("active");return render()}try{if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){const p=await DeviceOrientationEvent.requestPermission();if(p!=="granted")return toastMsg("没有获得方向传感器权限")}window.addEventListener("deviceorientationabsolute",ori,true);window.addEventListener("deviceorientation",ori,true);state.sensor=true;$("sensorBtn").classList.add("active");toastMsg("方向传感器已开启")}catch(e){toastMsg("方向传感器不可用")}};
-function ori(e){if(!state.sensor)return;let h=Number.isFinite(e.webkitCompassHeading)?e.webkitCompassHeading:(Number.isFinite(e.alpha)?360-e.alpha:NaN);if(Number.isFinite(h))state.viewAz=normDeg(h);if(Number.isFinite(e.beta))state.viewPitch=clamp(-e.beta,-20,85);render()}
+$("sensorBtn").onclick=async()=>{
+  if(state.sensor){
+    state.sensor=false;
+    $("sensorBtn").classList.remove("active");
+    return render();
+  }
+  try{
+    if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
+      const p=await DeviceOrientationEvent.requestPermission();
+      if(p!=="granted")return toastMsg("没有获得方向传感器权限");
+    }
+    window.addEventListener("deviceorientationabsolute",ori,true);
+    window.addEventListener("deviceorientation",ori,true);
+    window.addEventListener("orientationchange",render,true);
+    state.sensor=true;
+    $("sensorBtn").classList.add("active");
+    toastMsg("方向传感器已开启：现在会同时读取朝向和仰角");
+  }catch(e){
+    toastMsg("方向传感器不可用");
+  }
+};
+function screenAngle(){
+  if(window.screen&&screen.orientation&&Number.isFinite(screen.orientation.angle)) return screen.orientation.angle;
+  if(Number.isFinite(window.orientation)) return window.orientation;
+  return 0;
+}
+function sensorPitchFromBetaGamma(beta,gamma){
+  const angle=((screenAngle()%360)+360)%360;
+  let pitch=NaN;
+  // 这里的目标是估计“手机背面摄像头”的仰角，而不是屏幕法线的数学角。
+  // 竖屏时：手机竖直对准地平线 beta≈90，所以 pitch≈0；向上抬起时 beta>90，所以 pitch>0。
+  if(angle===0){
+    if(Number.isFinite(beta)) pitch=beta-90;
+  }else if(angle===180){
+    if(Number.isFinite(beta)) pitch=-beta-90;
+  }else if(angle===90){
+    if(Number.isFinite(gamma)) pitch=gamma-90;
+  }else if(angle===270){
+    if(Number.isFinite(gamma)) pitch=-gamma-90;
+  }else{
+    if(Number.isFinite(beta)) pitch=beta-90;
+  }
+  if(!Number.isFinite(pitch)) return NaN;
+  while(pitch>180) pitch-=360;
+  while(pitch<-180) pitch+=360;
+  return clamp(pitch+state.pitchOffset,-35,88);
+}
+function ori(e){
+  if(!state.sensor)return;
+  const alpha=Number.isFinite(e.alpha)?e.alpha:NaN;
+  const beta=Number.isFinite(e.beta)?e.beta:NaN;
+  const gamma=Number.isFinite(e.gamma)?e.gamma:NaN;
+  state.lastSensor={
+    alpha:Number.isFinite(alpha)?Math.round(alpha):"—",
+    beta:Number.isFinite(beta)?Math.round(beta):"—",
+    gamma:Number.isFinite(gamma)?Math.round(gamma):"—"
+  };
+  let h=Number.isFinite(e.webkitCompassHeading)?e.webkitCompassHeading:(Number.isFinite(alpha)?360-alpha:NaN);
+  if(Number.isFinite(h))state.viewAz=normDeg(h);
+  const pitch=sensorPitchFromBetaGamma(beta,gamma);
+  if(Number.isFinite(pitch)) state.viewPitch=pitch;
+  render();
+}
 $("cameraBtn").onclick=async()=>{if(state.camera){state.stream?.getTracks().forEach(t=>t.stop());state.stream=null;state.camera=false;camera.classList.remove("on");$("cameraBtn").classList.remove("active");return render()}try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});state.stream=s;camera.srcObject=s;camera.classList.add("on");state.camera=true;$("cameraBtn").classList.add("active");toastMsg("相机叠加已开启");render()}catch(e){toastMsg("相机权限不可用；需要 HTTPS 或 localhost")}};
 window.addEventListener("resize",render);window.addEventListener("beforeunload",()=>state.stream?.getTracks().forEach(t=>t.stop()));
 
