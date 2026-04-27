@@ -7,7 +7,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--
 font-family:"Songti SC","STSong","SimSun","Noto Serif CJK SC",serif}
 #camera{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;display:none;filter:brightness(.52) saturate(.9) contrast(1.05)}
 #camera.on{display:block}
-canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .top{position:fixed;z-index:5;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top));display:flex;align-items:flex-start;justify-content:space-between;gap:10px;pointer-events:none}
 .brand,.pill{background:rgba(3,6,14,.58);border:1px solid rgba(255,255,255,.13);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:18px;padding:10px 12px}
 .brand{font-weight:900;line-height:1.25}.brand .main{font-size:18px}.brand span{color:var(--accent)}.brand .sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
@@ -30,3 +30,8 @@ h2{margin:0 0 8px;font-size:20px}.subline{color:var(--accent);font-size:13px;lin
 .below-star{} .v .source{display:inline-block;margin:.25em 0;padding:.18em .5em;border-radius:999px;background:rgba(244,208,111,.10);border:1px solid rgba(244,208,111,.25);font-size:12px;color:#f4d06f}
 
 button,input,select,textarea{font-family:inherit}
+
+.panel,.settings,.catalog{position:fixed}
+.panel-close{position:absolute;right:12px;top:10px;width:30px;height:30px;border-radius:999px;padding:0;display:grid;place-items:center;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:var(--text);font-size:22px;line-height:1;font-family:"Songti SC","STSong","SimSun","Noto Serif CJK SC",serif;z-index:20}
+.panel-close:hover{background:rgba(244,208,111,.22);color:#f4d06f}
+.panel h2,.settings h2,.catalog h2{padding-right:34px}

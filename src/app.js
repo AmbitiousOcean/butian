@@ -37,7 +37,7 @@ const CONSTS=CONST_ROWS.split(";").map(r=>{const [abbr,name,gen,zh]=r.split("|")
 const CONST_BY_ABBR=new Map(CONSTS.map(c=>[c.abbr.toLowerCase(),c]));
 const CONST_BY_GEN=new Map(CONSTS.map(c=>[normKey(c.gen),c]));
 const commonConstByHip={"54061":"UMa","53910":"UMa","58001":"UMa","59774":"UMa","62956":"UMa","65378":"UMa","67301":"UMa","27989":"Ori","24436":"Ori","26311":"Ori","80763":"Sco","91262":"Lyr","97649":"Aql","102098":"Cyg","65474":"Vir","30438":"CMa"};
-const state={stars:fallbackStars,asterisms:fallbackAsterisms,mode:"fallback",lat:46.5197,lon:6.6323,city:"洛桑",viewAz:0,viewPitch:28,pitchOffset:0,lastSensor:null,fov:95,magLimit:6,sensor:false,camera:false,stream:null,drag:false,dragMoved:false,pointers:new Map(),pinch:false,wasPinching:false,startPinchDist:0,startPinchFov:95,selected:null,screens:[],astScreens:[],constBorders:[],constCenters:[],coverage:{cn:0,west:0}};
+const state={stars:fallbackStars,asterisms:fallbackAsterisms,mode:"fallback",lat:46.5197,lon:6.6323,city:"洛桑",viewAz:0,viewPitch:28,pitchOffset:0,lastSensor:null,fov:95,magLimit:6,sensor:false,camera:false,stream:null,drag:false,dragMoved:false,pointers:new Map(),pinch:false,wasPinching:false,startPinchDist:0,startPinchFov:95,touchPinching:false,touchStartDist:0,touchStartFov:95,touchWasPinching:false,selected:null,screens:[],astScreens:[],constBorders:[],constCenters:[],coverage:{cn:0,west:0}};
 const $=id=>document.getElementById(id);
 const canvas=$("sky"),ctx=canvas.getContext("2d"),camera=$("camera"),detail=$("detail"),settings=$("settings"),catalog=$("catalog"),toast=$("toast");
 function pad(n){return String(n).padStart(2,"0")} function toLocal(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`}
@@ -454,6 +454,19 @@ function currentStats(a){const d=date(),pts=[];if(a.center)pts.push(a.center);fo
 function toastMsg(t){toast.textContent=t;toast.classList.add("on");setTimeout(()=>toast.classList.remove("on"),1900)}
 function searchItems(){const q=normKey($("search").value);const out=[];for(const a of state.asterisms){const key=normKey([a.name,a.py,a.en,a.id].join(" "));if(!q||key.includes(q))out.push({type:"ast",a})}for(const s of state.stars){const key=normKey([s.zh,s.py,s.western,s.designation,s.bayer,s.flam,s.hd,s.hip,s.name].join(" "));if(q&&key.includes(q))out.push({type:"star",s})}return out.slice(0,80)}
 function updateCatalog(){const items=searchItems();$("catalogSummary").textContent=`显示 ${items.length} 项｜星官 ${state.asterisms.length} 个｜亮星 ${state.stars.length} 颗`;$("list").innerHTML="";for(const it of items){const div=document.createElement("div");div.className="item";if(it.type==="ast"){div.innerHTML=`<div class="name">星官：${esc(it.a.name||it.a.id)}</div><div class="meta">${esc([it.a.py,it.a.en].filter(Boolean).join(" ｜ "))}</div>`;div.onclick=()=>showAst(it.a)}else{div.innerHTML=`<div class="name">恒星：${esc(starTitle(it.s))}</div><div class="meta">${esc([it.s.western,it.s.designation,it.s.hip&&"HIP "+it.s.hip].filter(Boolean).join(" ｜ "))}</div>`;div.onclick=()=>{const aa=altAz(it.s.ra,it.s.dec,date(),state.lat,state.lon);showStar(it.s,aa)}}$("list").appendChild(div)}}
+
+function touchDistanceFromEvent(e){
+  if(!e.touches||e.touches.length<2)return 0;
+  const a=e.touches[0],b=e.touches[1];
+  return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+}
+function applyPinchZoom(dist,startDist,startFov){
+  if(dist<=0||startDist<=0)return;
+  // 两指张开 dist 增大 => fov 减小 => 放大；两指合拢 => fov 增大 => 缩小。
+  state.fov=clamp(startFov*startDist/dist,35,125);
+  updateFovInput();
+  render();
+}
 function updatePointer(e){state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY})}
 function removePointer(e){state.pointers.delete(e.pointerId)}
 function pointerPair(){return Array.from(state.pointers.values()).slice(0,2)}
@@ -465,6 +478,7 @@ function startSingleDragFromPointer(p){
 function updateFovInput(){const f=$("fov");if(f)f.value=state.fov}
 canvas.addEventListener("pointerdown",e=>{
   if(state.sensor)return;
+  if(e.pointerType==="touch"&&state.touchPinching)return;
   canvas.setPointerCapture?.(e.pointerId);
   updatePointer(e);
   if(state.pointers.size>=2){
@@ -479,6 +493,7 @@ canvas.addEventListener("pointerdown",e=>{
 });
 canvas.addEventListener("pointermove",e=>{
   if(state.sensor)return;
+  if(e.pointerType==="touch"&&state.touchPinching)return;
   if(!state.pointers.has(e.pointerId))return;
   updatePointer(e);
   if(state.pointers.size>=2){
@@ -514,7 +529,7 @@ canvas.addEventListener("pointerup",e=>{
     return;
   }
   state.drag=false;state.pinch=false;state.wasPinching=false;
-  if(wasPinching||moved)return;
+  if(wasPinching||state.touchWasPinching||moved)return;
   let best=null;
   for(const it of state.screens){const d=Math.hypot(it.x-e.clientX,it.y-e.clientY);if(d<it.r&&(!best||d<best.d))best={...it,d}}
   if(best)return showStar(best.s,best.aa);
@@ -526,13 +541,58 @@ canvas.addEventListener("pointercancel",e=>{
   removePointer(e);
   if(state.pointers.size===0){state.drag=false;state.pinch=false;state.wasPinching=false;}
 });
+
+canvas.addEventListener("touchstart",e=>{
+  if(e.touches&&e.touches.length>=2){
+    e.preventDefault();
+    state.touchPinching=true;
+    state.touchWasPinching=true;
+    state.drag=false;
+    state.pinch=true;
+    state.wasPinching=true;
+    state.touchStartDist=touchDistanceFromEvent(e)||1;
+    state.touchStartFov=state.fov;
+  }
+},{passive:false});
+canvas.addEventListener("touchmove",e=>{
+  if(state.touchPinching&&e.touches&&e.touches.length>=2){
+    e.preventDefault();
+    applyPinchZoom(touchDistanceFromEvent(e),state.touchStartDist,state.touchStartFov);
+  }
+},{passive:false});
+canvas.addEventListener("touchend",e=>{
+  if(e.touches&&e.touches.length<2){
+    state.touchPinching=false;
+    state.pinch=false;
+    // 延迟清除，避免 touch 后紧跟 pointerup 被识别成点击。
+    setTimeout(()=>{state.touchWasPinching=false;state.wasPinching=false;},180);
+  }
+},{passive:false});
+canvas.addEventListener("touchcancel",e=>{
+  state.touchPinching=false;
+  state.touchWasPinching=false;
+  state.pinch=false;
+  state.wasPinching=false;
+},{passive:false});
 canvas.addEventListener("wheel",e=>{e.preventDefault();state.fov=clamp(state.fov+Math.sign(e.deltaY)*5,35,125);updateFovInput();render()},{passive:false})
 $("fov").oninput=e=>{state.fov=Number(e.target.value);render()};if($("pitchOffset"))$("pitchOffset").oninput=e=>{state.pitchOffset=Number(e.target.value);render()};$("magLimit").oninput=e=>{state.magLimit=Number(e.target.value);render()};$("now").onclick=()=>{$("dt").value=toLocal(new Date());render()};$("dt").oninput=render;$("lat").oninput=e=>{state.lat=Number(e.target.value);render()};$("lon").oninput=e=>{state.lon=Number(e.target.value);render()};
 $("city").onchange=e=>{const c=cities[e.target.value];state.city=c.name;state.lat=c.lat;state.lon=c.lon;$("lat").value=c.lat;$("lon").value=c.lon;render()};
 $("detailBtn").onclick=()=>{detail.classList.toggle("on");$("detailBtn").classList.toggle("active",detail.classList.contains("on"))};
 $("settingsBtn").onclick=()=>{settings.classList.toggle("on");catalog.classList.remove("on")};$("closeSettings").onclick=()=>settings.classList.remove("on");
-$("catalogBtn").onclick=()=>{catalog.classList.toggle("on");settings.classList.remove("on");updateCatalog()};$("search").oninput=updateCatalog;
+$("catalogBtn").onclick=()=>{catalog.classList.toggle("on");$("catalogBtn").classList.toggle("active",catalog.classList.contains("on"));settings.classList.remove("on");updateCatalog()};$("search").oninput=updateCatalog;
 $("northBtn").onclick=()=>{state.sensor=false;$("sensorBtn").classList.remove("active");state.viewAz=0;state.viewPitch=24;render()};
+
+document.querySelectorAll(".panel-close").forEach(btn=>{
+  btn.addEventListener("click", ev=>{
+    ev.stopPropagation();
+    const id=btn.dataset.close;
+    const el=$(id);
+    if(el) el.classList.remove("on");
+    if(id==="detail") $("detailBtn").classList.remove("active");
+    if(id==="catalog") $("catalogBtn").classList.remove("active");
+  });
+});
+
 $("sensorBtn").onclick=async()=>{
   if(state.sensor){
     state.sensor=false;
