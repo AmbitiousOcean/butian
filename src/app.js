@@ -37,7 +37,7 @@ const CONSTS=CONST_ROWS.split(";").map(r=>{const [abbr,name,gen,zh]=r.split("|")
 const CONST_BY_ABBR=new Map(CONSTS.map(c=>[c.abbr.toLowerCase(),c]));
 const CONST_BY_GEN=new Map(CONSTS.map(c=>[normKey(c.gen),c]));
 const commonConstByHip={"54061":"UMa","53910":"UMa","58001":"UMa","59774":"UMa","62956":"UMa","65378":"UMa","67301":"UMa","27989":"Ori","24436":"Ori","26311":"Ori","80763":"Sco","91262":"Lyr","97649":"Aql","102098":"Cyg","65474":"Vir","30438":"CMa"};
-const state={stars:fallbackStars,asterisms:fallbackAsterisms,mode:"fallback",lat:46.5197,lon:6.6323,city:"洛桑",viewAz:0,viewPitch:28,pitchOffset:0,lastSensor:null,fov:95,magLimit:6,sensor:false,camera:false,stream:null,drag:false,dragMoved:false,pointers:new Map(),pinching:false,pinchStartDist:0,pinchStartFov:95,selected:null,screens:[],astScreens:[],constBorders:[],constCenters:[],coverage:{cn:0,west:0}};
+const state={stars:fallbackStars,asterisms:fallbackAsterisms,mode:"fallback",lat:46.5197,lon:6.6323,city:"洛桑",viewAz:0,viewPitch:28,pitchOffset:0,lastSensor:null,fov:95,magLimit:6,sensor:false,camera:false,stream:null,drag:false,dragMoved:false,pointers:new Map(),pinch:false,wasPinching:false,startPinchDist:0,startPinchFov:95,selected:null,screens:[],astScreens:[],constBorders:[],constCenters:[],coverage:{cn:0,west:0}};
 const $=id=>document.getElementById(id);
 const canvas=$("sky"),ctx=canvas.getContext("2d"),camera=$("camera"),detail=$("detail"),settings=$("settings"),catalog=$("catalog"),toast=$("toast");
 function pad(n){return String(n).padStart(2,"0")} function toLocal(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`}
@@ -56,7 +56,7 @@ function project(alt,az){const w=canvas.clientWidth,h=canvas.clientHeight,b=basi
 function resize(){const dpr=window.devicePixelRatio||1,w=innerWidth,h=innerHeight;canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
 function curve(alt){let pts=[];for(let da=-180;da<=180;da+=2){const p=project(alt,normDeg(state.viewAz+da));if(p)pts.push(p)}return pts.sort((a,b)=>a.x-b.x)}
 function drawBg(){const w=canvas.clientWidth,h=canvas.clientHeight;ctx.clearRect(0,0,w,h);if(!state.camera){const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,"#18244a");g.addColorStop(.6,"#071024");g.addColorStop(1,"#02040a");ctx.fillStyle=g;ctx.fillRect(0,0,w,h)}else{ctx.fillStyle="rgba(4,7,16,.18)";ctx.fillRect(0,0,w,h)}}
-function drawGrid(){const w=canvas.clientWidth,h=canvas.clientHeight;const horizon=curve(0);if(horizon.length>1){ctx.beginPath();ctx.moveTo(horizon[0].x,h);for(const p of horizon)ctx.lineTo(p.x,p.y);ctx.lineTo(horizon.at(-1).x,h);ctx.closePath();ctx.fillStyle=state.camera?"rgba(170,170,185,.03)":"rgba(170,170,185,.04)";ctx.fill();ctx.strokeStyle="rgba(255,255,255,.28)";ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(horizon[0].x,horizon[0].y);for(const p of horizon)ctx.lineTo(p.x,p.y);ctx.stroke()}for(const alt of [30,60]){const c=curve(alt);if(c.length>1){ctx.strokeStyle="rgba(255,255,255,.08)";ctx.beginPath();ctx.moveTo(c[0].x,c[0].y);for(const p of c)ctx.lineTo(p.x,p.y);ctx.stroke()}}for(const c of [{n:"北",az:0},{n:"东",az:90},{n:"南",az:180},{n:"西",az:270}]){const p=project(2,c.az);if(!p)continue;ctx.font='bold 13px "Songti SC","STSong","SimSun","Noto Serif CJK SC",serif';ctx.textAlign="center";ctx.lineWidth=4;ctx.strokeStyle="rgba(0,0,0,.75)";ctx.fillStyle="rgba(238,243,255,.85)";ctx.strokeText(c.n,p.x,p.y-10);ctx.fillText(c.n,p.x,p.y-10)}ctx.strokeStyle="rgba(255,255,255,.22)";ctx.beginPath();ctx.moveTo(w/2-12,h/2);ctx.lineTo(w/2+12,h/2);ctx.moveTo(w/2,h/2-12);ctx.lineTo(w/2,h/2+12);ctx.stroke()}
+function drawGrid(){const w=canvas.clientWidth,h=canvas.clientHeight;const horizon=curve(0);if(horizon.length>1){ctx.beginPath();ctx.moveTo(horizon[0].x,h);for(const p of horizon)ctx.lineTo(p.x,p.y);ctx.lineTo(horizon.at(-1).x,h);ctx.closePath();ctx.fillStyle=state.camera?"rgba(170,170,185,.10)":"rgba(170,170,185,.20)";ctx.fill();ctx.strokeStyle="rgba(255,255,255,.28)";ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(horizon[0].x,horizon[0].y);for(const p of horizon)ctx.lineTo(p.x,p.y);ctx.stroke()}for(const alt of [30,60]){const c=curve(alt);if(c.length>1){ctx.strokeStyle="rgba(255,255,255,.08)";ctx.beginPath();ctx.moveTo(c[0].x,c[0].y);for(const p of c)ctx.lineTo(p.x,p.y);ctx.stroke()}}for(const c of [{n:"北",az:0},{n:"东",az:90},{n:"南",az:180},{n:"西",az:270}]){const p=project(2,c.az);if(!p)continue;ctx.font="bold 13px Songti SC, STSong, SimSun, serif";ctx.textAlign="center";ctx.lineWidth=4;ctx.strokeStyle="rgba(0,0,0,.75)";ctx.fillStyle="rgba(238,243,255,.85)";ctx.strokeText(c.n,p.x,p.y-10);ctx.fillText(c.n,p.x,p.y-10)}ctx.strokeStyle="rgba(255,255,255,.22)";ctx.beginPath();ctx.moveTo(w/2-12,h/2);ctx.lineTo(w/2+12,h/2);ctx.moveTo(w/2,h/2-12);ctx.lineTo(w/2,h/2+12);ctx.stroke()}
 function starTitle(s){return s.zh||s.name||s.western||s.designation||(s.hip?`HIP ${s.hip}`:"未命名恒星")}
 function plainPinyin(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
 function formatLines(lines){return lines.filter(Boolean).map(x=>esc(x)).join("<br>")}
@@ -280,11 +280,15 @@ for(const s of state.stars){
   if(!p) continue;
   const below=aa.alt<0;
   const br=Math.max(.18,1-(s.mag??6)/6.5),r=Math.max(1.0,4.4-(s.mag??6)*.45);
-  ctx.fillStyle=`rgba(240,248,255,${.22+br*.78})`;
+  if(below){
+    ctx.fillStyle=`rgba(180,180,195,${0.08+br*.16})`;
+  }else{
+    ctx.fillStyle=`rgba(240,248,255,${.22+br*.78})`;
+  }
   ctx.beginPath();
   ctx.arc(p.x,p.y,r,0,Math.PI*2);
   ctx.fill();
-  if(br>.65){
+  if(!below && br>.65){
     ctx.fillStyle=`rgba(240,248,255,${.05+br*.14})`;
     ctx.beginPath();
     ctx.arc(p.x,p.y,r*2.2,0,Math.PI*2);
@@ -299,7 +303,7 @@ for(const s of state.stars){
 labels.sort((a,b)=>b.priority-a.priority);
 const placed=[];
 ctx.save();
-ctx.font='11px "Songti SC","STSong","SimSun","Noto Serif CJK SC",serif';
+ctx.font="11px Songti SC, STSong, SimSun, serif";
 ctx.textAlign="left";
 ctx.textBaseline="bottom";
 ctx.lineWidth=3;
@@ -308,8 +312,8 @@ for(const lb of labels){
   for(const p of placed){ if(Math.hypot(p.x-lb.x,p.y-lb.y)<16){overlap=true;break;} }
   if(overlap) continue;
   placed.push(lb);
-  ctx.strokeStyle="rgba(0,0,0,.82)";
-  ctx.fillStyle="rgba(255,255,255,.95)";
+  ctx.strokeStyle=lb.below?"rgba(0,0,0,.48)":"rgba(0,0,0,.82)";
+  ctx.fillStyle=lb.below?"rgba(210,210,220,.40)":"rgba(255,255,255,.95)";
   ctx.strokeText(lb.text,lb.x,lb.y);
   ctx.fillText(lb.text,lb.x,lb.y);
 }
@@ -325,27 +329,22 @@ if(state.selected?.type==="star"){
   }
 }}
 
-function asterismHasVisibleStars(a,d){
-  // 这里的“可见”指通过当前视星等阈值，而不是是否在地平线上方。
-  // 用途：当星等限制调低时，自动降低星官密度。
-  if(a.members && a.members.length){
-    return a.members.some(s => Number.isFinite(s.mag) && s.mag <= state.magLimit);
+function asterismPassesMagLimit(a){
+  // 通过可见视星等控制星官数量：
+  // 只要该星官内至少有一颗成员星满足 mag <= limit，就显示该星官；
+  // 如果所有成员星都暗于 limit，则隐藏整个星官。这个规则不区分地平线上下。
+  const limit=state.magLimit;
+  if(a.members&&a.members.length){
+    return a.members.some(s=>!Number.isFinite(s.mag)||s.mag<=limit);
   }
-  // 如果这个星官没有成功匹配到成员恒星，则不要因为缺数据把它永久隐藏。
-  // 但尽量保守：只有在星等阈值较宽时才显示。
-  return state.magLimit >= 5.5;
+  // 某些星官暂时没有自动匹配到成员星时，保守显示，避免误删数据。
+  return true;
 }
-function pointerDistance(){
-  const arr=Array.from(state.pointers.values());
-  if(arr.length<2) return 0;
-  return Math.hypot(arr[0].x-arr[1].x, arr[0].y-arr[1].y);
-}
-
 function drawAsterisms(){
 state.astScreens=[];
 const d=date();
 for(const a of state.asterisms){
-  if(!asterismHasVisibleStars(a,d)) continue;
+  if(!asterismPassesMagLimit(a)) continue;
   const isSel=state.selected?.type==="ast"&&state.selected.id===a.id;
   if(a.lines?.length){
     for(const line of a.lines){
@@ -356,7 +355,7 @@ for(const a of state.asterisms){
         if(!p){prev=null;continue;}
         if(prev){
           const below=(prevAlt<0 && aa.alt<0);
-          ctx.strokeStyle=isSel?"rgba(244,208,111,.95)":"rgba(244,208,111,.58)";
+          ctx.strokeStyle=below ? "rgba(180,180,195,.22)" : (isSel?"rgba(244,208,111,.95)":"rgba(244,208,111,.58)");
           ctx.lineWidth=isSel?2.6:1.35;
           ctx.beginPath();
           ctx.moveTo(prev.x,prev.y);
@@ -388,41 +387,19 @@ for(const a of state.asterisms){
   }
   if(anchor){
     ctx.save();
-    ctx.font=isSel?'bold 17px "Songti SC","STSong","SimSun","Noto Serif CJK SC",serif':'bold 15px "Songti SC","STSong","SimSun","Noto Serif CJK SC",serif';
+    ctx.font=isSel?"bold 17px Songti SC, STSong, SimSun, serif":"bold 15px Songti SC, STSong, SimSun, serif";
     ctx.textAlign="center";
     ctx.textBaseline="bottom";
     ctx.lineWidth=4;
     ctx.strokeStyle="rgba(0,0,0,.82)";
-    ctx.fillStyle="#f4d06f";
+    ctx.fillStyle=anchorAlt<0?"rgba(244,208,111,.45)":"#f4d06f";
     ctx.strokeText(a.name,anchor.x,anchor.y-14);
     ctx.fillText(a.name,anchor.x,anchor.y-14);
     ctx.restore();
     state.astScreens.push({a,x:anchor.x,y:anchor.y});
   }
 }}
-
-function drawBelowHorizonMask(){
-  const w=canvas.clientWidth,h=canvas.clientHeight;
-  const horizon=curve(0);
-  if(horizon.length<=1) return;
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(horizon[0].x,h);
-  for(const p of horizon) ctx.lineTo(p.x,p.y);
-  ctx.lineTo(horizon.at(-1).x,h);
-  ctx.closePath();
-  ctx.fillStyle=state.camera?"rgba(190,190,205,.12)":"rgba(190,190,205,.20)";
-  ctx.fill();
-  ctx.strokeStyle="rgba(255,255,255,.30)";
-  ctx.lineWidth=1.2;
-  ctx.beginPath();
-  ctx.moveTo(horizon[0].x,horizon[0].y);
-  for(const p of horizon) ctx.lineTo(p.x,p.y);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function render(){resize();drawBg();drawGrid();drawStars();drawAsterisms();drawBelowHorizonMask();const sensorExtra=state.sensor&&state.lastSensor?`<br>alpha ${state.lastSensor.alpha}°｜beta ${state.lastSensor.beta}°｜gamma ${state.lastSensor.gamma}°`:"";
+function render(){resize();drawBg();drawGrid();drawStars();drawAsterisms();const sensorExtra=state.sensor&&state.lastSensor?`<br>alpha ${state.lastSensor.alpha}°｜beta ${state.lastSensor.beta}°｜gamma ${state.lastSensor.gamma}°`:"";
 $("status").innerHTML=`${state.sensor?"传感器":"手动"}｜${state.camera?"相机叠加":"纯星图"}<br>朝向 ${Math.round(state.viewAz)}°｜仰角 ${Math.round(state.viewPitch)}°｜${state.city}${sensorExtra}`;$("fovText").textContent=state.fov;if($("pitchOffsetText"))$("pitchOffsetText").textContent=state.pitchOffset;$("magText").textContent=state.magLimit.toFixed(1)}
 function showStar(s,aa){
 state.selected={type:"star",uid:s.uid};
@@ -477,36 +454,39 @@ function currentStats(a){const d=date(),pts=[];if(a.center)pts.push(a.center);fo
 function toastMsg(t){toast.textContent=t;toast.classList.add("on");setTimeout(()=>toast.classList.remove("on"),1900)}
 function searchItems(){const q=normKey($("search").value);const out=[];for(const a of state.asterisms){const key=normKey([a.name,a.py,a.en,a.id].join(" "));if(!q||key.includes(q))out.push({type:"ast",a})}for(const s of state.stars){const key=normKey([s.zh,s.py,s.western,s.designation,s.bayer,s.flam,s.hd,s.hip,s.name].join(" "));if(q&&key.includes(q))out.push({type:"star",s})}return out.slice(0,80)}
 function updateCatalog(){const items=searchItems();$("catalogSummary").textContent=`显示 ${items.length} 项｜星官 ${state.asterisms.length} 个｜亮星 ${state.stars.length} 颗`;$("list").innerHTML="";for(const it of items){const div=document.createElement("div");div.className="item";if(it.type==="ast"){div.innerHTML=`<div class="name">星官：${esc(it.a.name||it.a.id)}</div><div class="meta">${esc([it.a.py,it.a.en].filter(Boolean).join(" ｜ "))}</div>`;div.onclick=()=>showAst(it.a)}else{div.innerHTML=`<div class="name">恒星：${esc(starTitle(it.s))}</div><div class="meta">${esc([it.s.western,it.s.designation,it.s.hip&&"HIP "+it.s.hip].filter(Boolean).join(" ｜ "))}</div>`;div.onclick=()=>{const aa=altAz(it.s.ra,it.s.dec,date(),state.lat,state.lon);showStar(it.s,aa)}}$("list").appendChild(div)}}
+function updatePointer(e){state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY})}
+function removePointer(e){state.pointers.delete(e.pointerId)}
+function pointerPair(){return Array.from(state.pointers.values()).slice(0,2)}
+function pointerDistance(){const p=pointerPair();if(p.length<2)return 0;return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)}
+function startSingleDragFromPointer(p){
+  state.drag=true;state.dragMoved=false;state.pinch=false;
+  state.sx=p.x;state.sy=p.y;state.baz=state.viewAz;state.bp=state.viewPitch;
+}
+function updateFovInput(){const f=$("fov");if(f)f.value=state.fov}
 canvas.addEventListener("pointerdown",e=>{
-  state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(state.sensor)return;
+  canvas.setPointerCapture?.(e.pointerId);
+  updatePointer(e);
   if(state.pointers.size>=2){
-    state.pinching=true;
+    state.pinch=true;
+    state.wasPinching=true;
     state.drag=false;
-    state.dragMoved=true;
-    state.pinchStartDist=pointerDistance();
-    state.pinchStartFov=state.fov;
-    canvas.setPointerCapture?.(e.pointerId);
+    state.startPinchDist=pointerDistance()||1;
+    state.startPinchFov=state.fov;
     return;
   }
-  state.drag=true;
-  state.dragMoved=false;
-  state.sx=e.clientX;
-  state.sy=e.clientY;
-  state.baz=state.viewAz;
-  state.bp=state.viewPitch;
-  canvas.setPointerCapture?.(e.pointerId);
+  startSingleDragFromPointer({x:e.clientX,y:e.clientY});
 });
 canvas.addEventListener("pointermove",e=>{
-  if(state.pointers.has(e.pointerId)) state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(state.sensor)return;
-  if(state.pinching && state.pointers.size>=2){
+  if(!state.pointers.has(e.pointerId))return;
+  updatePointer(e);
+  if(state.pointers.size>=2){
     const dist=pointerDistance();
-    if(dist>0 && state.pinchStartDist>0){
-      const ratio=dist/state.pinchStartDist;
-      // 双指拉开：视场变小，画面放大；双指捏合：视场变大，画面缩小。
-      state.fov=clamp(state.pinchStartFov/ratio,35,125);
-      if($("fov")) $("fov").value=state.fov;
+    if(dist>0&&state.startPinchDist>0){
+      // 两指张开 => 视场角变小 => 放大；两指合拢 => 视场角变大 => 缩小。
+      state.fov=clamp(state.startPinchFov*state.startPinchDist/dist,35,125);
+      updateFovInput();
       render();
     }
     return;
@@ -518,39 +498,35 @@ canvas.addEventListener("pointermove",e=>{
   state.viewPitch=clamp(state.bp+dy*.13*state.fov/90,-20,85);
   render();
 });
-function endPointer(e){
-  state.pointers.delete(e.pointerId);
-  if(state.pinching){
-    if(state.pointers.size<2){
-      state.pinching=false;
-      state.drag=false;
-      state.dragMoved=true;
-      return;
-    }
-  }
+canvas.addEventListener("pointerup",e=>{
   const moved=state.dragMoved;
-  state.drag=false;
-  if(moved)return;
-  let best=null;
-  for(const it of state.screens){
-    const d=Math.hypot(it.x-e.clientX,it.y-e.clientY);
-    if(d<it.r&&(!best||d<best.d))best={...it,d};
+  const wasPinching=state.wasPinching||state.pinch;
+  removePointer(e);
+  if(state.pointers.size>=2){
+    state.startPinchDist=pointerDistance()||1;
+    state.startPinchFov=state.fov;
+    return;
   }
+  if(state.pointers.size===1){
+    const p=pointerPair()[0];
+    startSingleDragFromPointer(p);
+    state.wasPinching=false;
+    return;
+  }
+  state.drag=false;state.pinch=false;state.wasPinching=false;
+  if(wasPinching||moved)return;
+  let best=null;
+  for(const it of state.screens){const d=Math.hypot(it.x-e.clientX,it.y-e.clientY);if(d<it.r&&(!best||d<best.d))best={...it,d}}
   if(best)return showStar(best.s,best.aa);
   let ba=null;
-  for(const it of state.astScreens){
-    const d=Math.hypot(it.x-e.clientX,it.y-e.clientY);
-    if(d<28&&(!ba||d<ba.d))ba={...it,d};
-  }
+  for(const it of state.astScreens){const d=Math.hypot(it.x-e.clientX,it.y-e.clientY);if(d<28&&(!ba||d<ba.d))ba={...it,d}}
   if(ba)return showAst(ba.a);
-}
-canvas.addEventListener("pointerup",endPointer);
-canvas.addEventListener("pointercancel",e=>{
-  state.pointers.delete(e.pointerId);
-  if(state.pointers.size<2)state.pinching=false;
-  state.drag=false;
 });
-canvas.addEventListener("wheel",e=>{e.preventDefault();state.fov=clamp(state.fov+Math.sign(e.deltaY)*5,35,125);$("fov").value=state.fov;render()},{passive:false})
+canvas.addEventListener("pointercancel",e=>{
+  removePointer(e);
+  if(state.pointers.size===0){state.drag=false;state.pinch=false;state.wasPinching=false;}
+});
+canvas.addEventListener("wheel",e=>{e.preventDefault();state.fov=clamp(state.fov+Math.sign(e.deltaY)*5,35,125);updateFovInput();render()},{passive:false})
 $("fov").oninput=e=>{state.fov=Number(e.target.value);render()};if($("pitchOffset"))$("pitchOffset").oninput=e=>{state.pitchOffset=Number(e.target.value);render()};$("magLimit").oninput=e=>{state.magLimit=Number(e.target.value);render()};$("now").onclick=()=>{$("dt").value=toLocal(new Date());render()};$("dt").oninput=render;$("lat").oninput=e=>{state.lat=Number(e.target.value);render()};$("lon").oninput=e=>{state.lon=Number(e.target.value);render()};
 $("city").onchange=e=>{const c=cities[e.target.value];state.city=c.name;state.lat=c.lat;state.lon=c.lon;$("lat").value=c.lat;$("lon").value=c.lon;render()};
 $("detailBtn").onclick=()=>{detail.classList.toggle("on");$("detailBtn").classList.toggle("active",detail.classList.contains("on"))};
